@@ -37,6 +37,18 @@ jobs:
       - name: Gerar aplicação web
         run: npm run web:build
 
+      - name: Validar artefatos PWA
+        run: |
+          test -f dist/manifest.json
+          test -f dist/sw.js
+          test -f dist/icons/icon-192.png
+          test -f dist/icons/icon-512.png
+          grep -q 'rel="manifest"' dist/index.html
+          if grep -qE 'precacheAndRoute|caches\.open|cache\.put' dist/sw.js; then
+            echo "O service worker não deve manter cache offline."
+            exit 1
+          fi
+
       - name: Validar imagem Docker
         run: docker build --tag toothy-planner-web:ci .
 
@@ -64,3 +76,13 @@ jobs:
 
           docker exec toothy-planner-web-ci \
             grep -R -q 'https://api.example.com/api/v1' /usr/share/nginx/html
+          docker exec toothy-planner-web-ci \
+            test -f /usr/share/nginx/html/manifest.json
+          docker exec toothy-planner-web-ci \
+            test -f /usr/share/nginx/html/sw.js
+          docker exec toothy-planner-web-ci sh -c \
+            "wget -S -O /dev/null http://127.0.0.1/manifest.json 2>&1 |
+            grep -i 'Content-Type: application/manifest+json'"
+          docker exec toothy-planner-web-ci sh -c \
+            "wget -S -O /dev/null http://127.0.0.1/sw.js 2>&1 |
+            grep -i 'Cache-Control: no-cache, no-store, must-revalidate'"

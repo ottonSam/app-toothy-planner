@@ -12,6 +12,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppDrawerContent } from '@/components/app-drawer-content';
 import { Button } from '@/components/ui/button';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
+import { registerServiceWorker } from '@/lib/register-service-worker';
 import { getThemePalette, getThemeVariables } from '@/lib/theme';
 import type { RootDrawerParamList } from '@/navigation/types';
 import { CalendarsScreen } from '@/screens/calendars-screen';
@@ -34,6 +35,8 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+registerServiceWorker();
 
 export default function App() {
   return (
