@@ -1,0 +1,13 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${WEB_CONTAINER_NAME:-toothy-planner-web}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      EXPO_PUBLIC_API_BASE_URL: ${EXPO_PUBLIC_API_BASE_URL:-http://localhost:8080/api/v1}
+    ports:
+      - '${WEB_PORT:-8014}:80'

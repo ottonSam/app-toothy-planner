@@ -1,0 +1,12 @@
+node_modules
+.expo
+dist
+web-build
+.git
+.github
+.env
+.env.*
+!.env.example
+npm-debug.log*
+*.orig.*
+.DS_Store

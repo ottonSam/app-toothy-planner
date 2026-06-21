@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validar aplicação web
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Validar lint e formatação
+        run: npm run lint
+
+      - name: Validar tipos
+        run: npm run typecheck
+
+      - name: Gerar aplicação web
+        run: npm run web:build
+
+      - name: Validar imagem Docker
+        run: docker build --tag toothy-planner-web:ci .
+
+      - name: Validar variáveis de ambiente no container
+        run: |
+          cleanup() {
+            docker rm --force toothy-planner-web-ci >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          docker run --detach \
+            --name toothy-planner-web-ci \
+            --env EXPO_PUBLIC_API_BASE_URL=https://api.example.com/api/v1 \
+            toothy-planner-web:ci
+
+          for attempt in {1..20}; do
+            if docker exec toothy-planner-web-ci wget --spider http://127.0.0.1/; then
+              break
+            fi
+            if [ "$attempt" -eq 20 ]; then
+              exit 1
+            fi
+            sleep 1
+          done
+
+          docker exec toothy-planner-web-ci \
+            grep -R -q 'https://api.example.com/api/v1' /usr/share/nginx/html
