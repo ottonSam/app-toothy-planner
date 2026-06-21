@@ -18,6 +18,7 @@ type BottomDrawerProps = {
   contentClassName?: string;
   maxHeight?: `${number}%` | number;
   onClose: () => void;
+  onClosed?: () => void;
   visible: boolean;
 };
 
@@ -26,6 +27,7 @@ export function BottomDrawer({
   contentClassName = 'gap-4',
   maxHeight = '90%',
   onClose,
+  onClosed,
   visible,
 }: BottomDrawerProps) {
   const insets = useSafeAreaInsets();
@@ -33,6 +35,11 @@ export function BottomDrawer({
   const [isPresented, setIsPresented] = useState(visible);
   const animationProgress = useRef(new Animated.Value(visible ? 0 : 1)).current;
   const animationRef = useRef<ReturnType<typeof Animated.timing> | null>(null);
+  const onClosedRef = useRef(onClosed);
+
+  useEffect(() => {
+    onClosedRef.current = onClosed;
+  }, [onClosed]);
 
   useEffect(() => {
     animationRef.current?.stop();
@@ -58,6 +65,7 @@ export function BottomDrawer({
       animationRef.current.start(({ finished }) => {
         if (finished) {
           setIsPresented(false);
+          onClosedRef.current?.();
         }
       });
     }

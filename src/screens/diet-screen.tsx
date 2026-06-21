@@ -18,6 +18,7 @@ import { ControlledDateInput } from '@/components/forms/controlled-date-input';
 import { ControlledFoodAutocomplete } from '@/components/forms/controlled-food-autocomplete';
 import { ControlledInput } from '@/components/forms/controlled-input';
 import { ControlledSelect } from '@/components/forms/controlled-select';
+import { DeleteConfirmationDrawer } from '@/components/delete-confirmation-drawer';
 import { ListRequestState } from '@/components/list-request-state';
 import { MutationStatusDrawer } from '@/components/mutation-status-drawer';
 import { ScreenScrollView } from '@/components/screen-scroll-view';
@@ -59,6 +60,7 @@ export function DietScreen({ navigation }: DietScreenProps) {
   const [isEntryFormOpen, setIsEntryFormOpen] = useState(false);
   const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+  const [entryPendingDeletion, setEntryPendingDeletion] = useState<DietEntryResponse | null>(null);
 
   const dateForm = useForm<{ date: string }>({
     defaultValues: { date: toDateInputValue(new Date()) },
@@ -264,7 +266,7 @@ export function DietScreen({ navigation }: DietScreenProps) {
                 entry={entry}
                 isDeleting={deletingEntryId === entry.id}
                 key={entry.id}
-                onDelete={() => deleteMutation.mutate(entry.id)}
+                onDelete={() => setEntryPendingDeletion(entry)}
               />
             )}
           />
@@ -285,6 +287,18 @@ export function DietScreen({ navigation }: DietScreenProps) {
         onClose={() => setIsGoalFormOpen(false)}
         onSubmit={(data) => goalMutation.mutate(data)}
         selectedDate={selectedDate}
+      />
+      <DeleteConfirmationDrawer
+        description="Esta entrada sera removida dos macros consumidos no dia. Esta acao nao pode ser desfeita."
+        itemName={entryPendingDeletion?.food.name}
+        onCancel={() => setEntryPendingDeletion(null)}
+        onConfirm={() => {
+          if (entryPendingDeletion) {
+            deleteMutation.mutate(entryPendingDeletion.id);
+          }
+        }}
+        title="Excluir entrada de alimentacao?"
+        visible={Boolean(entryPendingDeletion)}
       />
       <MutationStatusDrawer
         message={feedback.message}

@@ -21,6 +21,7 @@ import { ControlledColorSwatches } from '@/components/forms/controlled-color-swa
 import { ControlledDateInput } from '@/components/forms/controlled-date-input';
 import { ControlledInput } from '@/components/forms/controlled-input';
 import { ControlledSelect } from '@/components/forms/controlled-select';
+import { DeleteConfirmationDrawer } from '@/components/delete-confirmation-drawer';
 import { ListRequestState } from '@/components/list-request-state';
 import { MutationStatusDrawer } from '@/components/mutation-status-drawer';
 import { ScreenScrollView } from '@/components/screen-scroll-view';
@@ -69,11 +70,14 @@ export function FinancialCycleScreen({ onBack, wallet }: FinancialCycleScreenPro
   const feedback = useMutationFeedback();
   const palette = useThemePalette();
   const [selectedCycleId, setSelectedCycleId] = useState<string | null>(null);
-  const [selectedView, setSelectedView] = useState<CycleView>('metrics');
+  const [selectedView, setSelectedView] = useState<CycleView>('expenses');
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const [isExpenseFormOpen, setIsExpenseFormOpen] = useState(false);
   const [isCategoryFormOpen, setIsCategoryFormOpen] = useState(false);
   const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(null);
+  const [expensePendingDeletion, setExpensePendingDeletion] = useState<ExpenseResponse | null>(
+    null
+  );
 
   const cyclesQuery = useQuery({
     queryKey: queryKeys.expenseCycles(wallet.id),
@@ -359,7 +363,11 @@ export function FinancialCycleScreen({ onBack, wallet }: FinancialCycleScreenPro
             expenses={expensesQuery.data}
             isError={expensesQuery.isError}
             isLoading={expensesQuery.isLoading}
-            onDelete={(expenseId) => deleteMutation.mutate(expenseId)}
+            onDelete={(expenseId) =>
+              setExpensePendingDeletion(
+                expensesQuery.data?.find((expense) => expense.id === expenseId) ?? null
+              )
+            }
             onNewExpense={openExpenseForm}
             onRetry={() => expensesQuery.refetch()}
           />
@@ -387,6 +395,18 @@ export function FinancialCycleScreen({ onBack, wallet }: FinancialCycleScreenPro
         isPending={categoryMutation.isPending}
         onClose={() => setIsCategoryFormOpen(false)}
         onSubmit={(data) => categoryMutation.mutate(data)}
+      />
+      <DeleteConfirmationDrawer
+        description="O gasto sera removido do ciclo e das metricas financeiras. Esta acao nao pode ser desfeita."
+        itemName={expensePendingDeletion?.description}
+        onCancel={() => setExpensePendingDeletion(null)}
+        onConfirm={() => {
+          if (expensePendingDeletion) {
+            deleteMutation.mutate(expensePendingDeletion.id);
+          }
+        }}
+        title="Excluir gasto?"
+        visible={Boolean(expensePendingDeletion)}
       />
       <MutationStatusDrawer
         message={feedback.message}
