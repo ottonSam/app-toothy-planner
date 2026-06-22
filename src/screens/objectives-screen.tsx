@@ -7,7 +7,9 @@ import { Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { listCalendars } from '@/api/calendars';
-import { createGoal, listGoals, updateGoal } from '@/api/goals';
+import { createGoal, deleteGoal, listGoals, updateGoal } from '@/api/goals';
+import { ActionConfirmationDrawer } from '@/components/action-confirmation-drawer';
+import { DeleteConfirmationDrawer } from '@/components/delete-confirmation-drawer';
 import { ControlledInput } from '@/components/forms/controlled-input';
 import { ControlledSelect } from '@/components/forms/controlled-select';
 import { ListRequestState } from '@/components/list-request-state';
@@ -33,6 +35,10 @@ export function ObjectivesScreen({ navigation }: ObjectivesScreenProps) {
   const palette = useThemePalette();
   const [editingGoal, setEditingGoal] = useState<GoalResponse | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [completingGoalId, setCompletingGoalId] = useState<string | null>(null);
+  const [goalPendingCompletion, setGoalPendingCompletion] = useState<GoalResponse | null>(null);
+  const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
+  const [goalPendingDeletion, setGoalPendingDeletion] = useState<GoalResponse | null>(null);
 
   const goalsQuery = useQuery({ queryKey: queryKeys.goals, queryFn: listGoals });
   const calendarsQuery = useQuery({ queryKey: queryKeys.calendars, queryFn: listCalendars });
@@ -76,9 +82,25 @@ export function ObjectivesScreen({ navigation }: ObjectivesScreenProps) {
     mutationFn: (goal: GoalResponse) =>
       updateGoal(goal.id, { name: goal.name, type: goal.type, isComplete: true }),
     onError: feedback.showError,
+    onMutate: (goal) => setCompletingGoalId(goal.id),
+    onSettled: () => setCompletingGoalId(null),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.goals });
       feedback.showSuccess('Objetivo concluido com sucesso.');
+    },
+  });
+
+  const deleteGoalMutation = useMutation({
+    mutationFn: deleteGoal,
+    onError: feedback.showError,
+    onMutate: (goalId) => setDeletingGoalId(goalId),
+    onSettled: () => setDeletingGoalId(null),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.goals }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.calendars }),
+      ]);
+      feedback.showSuccess('Objetivo excluido com sucesso.');
     },
   });
 
@@ -135,10 +157,12 @@ export function ObjectivesScreen({ navigation }: ObjectivesScreenProps) {
           ? groupedGoals.map((group) => (
               <GoalGroup
                 calendars={calendarsQuery.data ?? []}
+                completingGoalId={completingGoalId}
+                deletingGoalId={deletingGoalId}
                 group={group}
-                isCompleting={completeGoalMutation.isPending}
                 key={group.type}
-                onComplete={(goal) => completeGoalMutation.mutate(goal)}
+                onComplete={setGoalPendingCompletion}
+                onDelete={setGoalPendingDeletion}
                 onEdit={openEditForm}
               />
             ))
@@ -153,6 +177,31 @@ export function ObjectivesScreen({ navigation }: ObjectivesScreenProps) {
         onSubmit={(data) => saveGoalMutation.mutate(data)}
         title={editingGoal ? 'Editar objetivo' : 'Novo objetivo'}
       />
+      <ActionConfirmationDrawer
+        confirmLabel="Concluir"
+        description="O objetivo sera marcado como concluido e nao podera mais ser editado."
+        itemName={goalPendingCompletion?.name}
+        onCancel={() => setGoalPendingCompletion(null)}
+        onConfirm={() => {
+          if (goalPendingCompletion) {
+            completeGoalMutation.mutate(goalPendingCompletion);
+          }
+        }}
+        title="Concluir objetivo?"
+        visible={Boolean(goalPendingCompletion)}
+      />
+      <DeleteConfirmationDrawer
+        description="O objetivo sera removido permanentemente. Esta acao nao pode ser desfeita."
+        itemName={goalPendingDeletion?.name}
+        onCancel={() => setGoalPendingDeletion(null)}
+        onConfirm={() => {
+          if (goalPendingDeletion) {
+            deleteGoalMutation.mutate(goalPendingDeletion.id);
+          }
+        }}
+        title="Excluir objetivo?"
+        visible={Boolean(goalPendingDeletion)}
+      />
       <MutationStatusDrawer
         message={feedback.message}
         onClose={feedback.closeFeedback}
@@ -164,15 +213,19 @@ export function ObjectivesScreen({ navigation }: ObjectivesScreenProps) {
 
 function GoalGroup({
   calendars,
+  completingGoalId,
+  deletingGoalId,
   group,
-  isCompleting,
   onComplete,
+  onDelete,
   onEdit,
 }: {
   calendars: CalendarResponse[];
+  completingGoalId: string | null;
+  deletingGoalId: string | null;
   group: { completed: GoalResponse[]; pending: GoalResponse[]; type: GoalType };
-  isCompleting: boolean;
   onComplete: (goal: GoalResponse) => void;
+  onDelete: (goal: GoalResponse) => void;
   onEdit: (goal: GoalResponse) => void;
 }) {
   return (
@@ -194,9 +247,11 @@ function GoalGroup({
         <GoalCard
           calendars={calendars}
           goal={goal}
-          isCompleting={isCompleting}
+          isCompleting={completingGoalId === goal.id}
+          isDeleting={deletingGoalId === goal.id}
           key={goal.id}
           onComplete={onComplete}
+          onDelete={onDelete}
           onEdit={onEdit}
         />
       ))}
@@ -208,8 +263,10 @@ function GoalGroup({
             <GoalCard
               calendars={calendars}
               goal={goal}
+              isDeleting={deletingGoalId === goal.id}
               key={goal.id}
               onComplete={onComplete}
+              onDelete={onDelete}
               onEdit={onEdit}
             />
           ))}
@@ -223,13 +280,17 @@ function GoalCard({
   calendars,
   goal,
   isCompleting,
+  isDeleting,
   onComplete,
+  onDelete,
   onEdit,
 }: {
   calendars: CalendarResponse[];
   goal: GoalResponse;
   isCompleting?: boolean;
+  isDeleting: boolean;
   onComplete: (goal: GoalResponse) => void;
+  onDelete: (goal: GoalResponse) => void;
   onEdit: (goal: GoalResponse) => void;
 }) {
   const linkedCalendar =
@@ -263,20 +324,30 @@ function GoalCard({
           {goal.isComplete ? 'Concluido' : 'Pendente'}
         </Text>
       </View>
-      {!goal.isComplete ? (
-        <View className="flex-row gap-2">
-          <Button className="flex-1" size="sm" variant="secondary" onPress={() => onEdit(goal)}>
-            Editar
-          </Button>
-          <Button
-            className="flex-1"
-            isLoading={isCompleting}
-            size="sm"
-            onPress={() => onComplete(goal)}>
-            Concluir
-          </Button>
-        </View>
-      ) : null}
+      <View className="flex-row gap-2">
+        {!goal.isComplete ? (
+          <>
+            <Button className="flex-1" size="sm" variant="secondary" onPress={() => onEdit(goal)}>
+              Editar
+            </Button>
+            <Button
+              className="flex-1"
+              isLoading={isCompleting}
+              size="sm"
+              onPress={() => onComplete(goal)}>
+              Concluir
+            </Button>
+          </>
+        ) : null}
+        <Button
+          className="flex-1"
+          isLoading={isDeleting}
+          size="sm"
+          variant="destructive"
+          onPress={() => onDelete(goal)}>
+          Excluir
+        </Button>
+      </View>
     </View>
   );
 }
