@@ -222,6 +222,11 @@ export type ExpenseCycleMetricsResponse = {
   installmentTotalFromCurrentCycle: number;
   recurringMonthlyTotal: number;
   oneTimeTotal: number;
+  spendingByCategory: {
+    category: ExpenseCategorySummaryResponse;
+    totalSpent: number;
+    percentage: number;
+  }[];
 };
 
 export type ExpenseWalletMetricsResponse = {

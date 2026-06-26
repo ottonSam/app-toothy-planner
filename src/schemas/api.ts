@@ -223,6 +223,13 @@ export const expenseCycleMetricsResponseSchema = z.object({
   installmentTotalFromCurrentCycle: z.number(),
   recurringMonthlyTotal: z.number(),
   oneTimeTotal: z.number(),
+  spendingByCategory: z.array(
+    z.object({
+      category: expenseCategorySummaryResponseSchema,
+      totalSpent: z.number(),
+      percentage: z.number(),
+    })
+  ),
 });
 
 export const expenseWalletMetricsResponseSchema = z.object({

@@ -596,6 +596,61 @@ function CycleMetrics({
         />
         <MetricCard label="Recorrencias" value={formatCurrencyBr(metrics.recurringMonthlyTotal)} />
       </View>
+
+      <SpendingByCategoryCard metrics={metrics} />
+    </View>
+  );
+}
+
+function SpendingByCategoryCard({ metrics }: { metrics: ExpenseCycleMetricsResponse }) {
+  return (
+    <View className="gap-4 rounded-2xl border border-border bg-card p-4">
+      <View>
+        <Text className="text-lg font-semibold text-foreground">Gastos por categoria</Text>
+        <Text className="text-sm text-muted-foreground">
+          Distribuicao dos {formatCurrencyBr(metrics.totalSpent)} gastos no ciclo.
+        </Text>
+      </View>
+
+      {metrics.spendingByCategory.length ? (
+        <View className="gap-3">
+          {metrics.spendingByCategory.map((item) => (
+            <View className="gap-2" key={item.category.id}>
+              <View className="flex-row items-center gap-3">
+                <View
+                  className="h-10 w-10 items-center justify-center rounded-full"
+                  style={{ backgroundColor: item.category.color }}>
+                  <Ionicons color="#ffffff" name={getCategoryIcon(item.category.icon)} size={20} />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-semibold text-foreground">
+                    {item.category.name}
+                  </Text>
+                  <Text className="text-xs text-muted-foreground">
+                    {formatPercentage(item.percentage)}
+                  </Text>
+                </View>
+                <Text className="text-sm font-semibold text-foreground">
+                  {formatCurrencyBr(item.totalSpent)}
+                </Text>
+              </View>
+              <View className="h-2 overflow-hidden rounded-full bg-muted">
+                <View
+                  className="h-full"
+                  style={{
+                    backgroundColor: item.category.color,
+                    width: `${Math.min(Math.max(item.percentage, 0), 100)}%`,
+                  }}
+                />
+              </View>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <Text className="text-sm text-muted-foreground">
+          Nenhum gasto categorizado neste ciclo.
+        </Text>
+      )}
     </View>
   );
 }
@@ -986,4 +1041,11 @@ function getCategoryIcon(icon: string): keyof typeof Ionicons.glyphMap {
 
 function parseDecimal(value: string) {
   return Number(value.replace(',', '.'));
+}
+
+function formatPercentage(value: number) {
+  return `${new Intl.NumberFormat('pt-BR', {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 0,
+  }).format(value)}%`;
 }
