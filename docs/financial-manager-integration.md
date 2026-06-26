@@ -224,7 +224,29 @@ calculado das parcelas deve ser obtido na listagem de gastos.
   "remainingDailyAmount": 916.37,
   "installmentTotalFromCurrentCycle": 0.00,
   "recurringMonthlyTotal": 0.00,
-  "oneTimeTotal": 250.90
+  "oneTimeTotal": 250.90,
+  "spendingByCategory": [
+    {
+      "category": {
+        "id": "190e5224-d8f7-4df8-8a6f-2aa38efcf8ad",
+        "name": "Alimentacao",
+        "color": "#F97316",
+        "icon": "utensils"
+      },
+      "totalSpent": 150.90,
+      "percentage": 60.14
+    },
+    {
+      "category": {
+        "id": "59a4eef4-9146-4cb8-8403-b2e111b758ed",
+        "name": "Transporte",
+        "color": "#0EA5E9",
+        "icon": "car"
+      },
+      "totalSpent": 100.00,
+      "percentage": 39.86
+    }
+  ]
 }
 ```
 
@@ -238,6 +260,19 @@ Calculos:
   diante.
 - `recurringMonthlyTotal`: soma das recorrencias atualmente ativas.
 - `oneTimeTotal`: soma dos gastos `ONE_TIME` do ciclo.
+- `spendingByCategory`: lista para grafico de barras com categoria, total gasto
+  no ciclo e porcentagem da categoria sobre `totalSpent`.
+
+Regras de `spendingByCategory`:
+
+- Considera todos os tipos de gasto do ciclo: `ONE_TIME`, `INSTALLMENT` e
+  `RECURRING`.
+- Categorias sem gastos no ciclo nao aparecem.
+- Ciclos sem gastos retornam `[]`.
+- `percentage` e calculado como `totalSpent da categoria / totalSpent do ciclo
+  * 100`.
+- `percentage` e arredondado para duas casas decimais com `HALF_UP`.
+- A lista e ordenada por maior `totalSpent`; em empate, por nome da categoria.
 
 Os saldos podem ser negativos quando a meta for ultrapassada.
 
@@ -445,7 +480,16 @@ recursos pai.
 
 Resposta: `204 No Content`.
 
-Remove somente o gasto informado.
+Para `ONE_TIME` e `INSTALLMENT`, remove somente o gasto informado.
+
+Para `RECURRING`, remove a ocorrencia selecionada e todas as ocorrencias
+posteriores com o mesmo `recurrenceId`. A recorrencia pai e marcada como
+cancelada no inicio do ciclo selecionado, impedindo novas geracoes. Ocorrencias
+de ciclos anteriores e outras recorrencias sao preservadas.
+
+Esse comportamento difere do endpoint `/recurring-expenses/{id}/cancel`: o
+cancelamento preserva a ocorrencia do ciclo selecionado e remove somente as
+posteriores.
 
 ## Endpoints de parcelamentos
 
