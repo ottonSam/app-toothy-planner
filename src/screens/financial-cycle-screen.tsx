@@ -17,6 +17,7 @@ import {
   listExpenseCategories,
   listExpenseCycles,
 } from '@/api/financial-manager';
+import { CardActionsMenu } from '@/components/card-actions-menu';
 import { ControlledColorSwatches } from '@/components/forms/controlled-color-swatches';
 import { ControlledDateInput } from '@/components/forms/controlled-date-input';
 import { ControlledInput } from '@/components/forms/controlled-input';
@@ -56,12 +57,36 @@ type CycleView = 'expenses' | 'metrics';
 
 const categoryIconOptions = [
   { label: 'Alimentacao', value: 'restaurant-outline' },
+  { label: 'Fast food', value: 'fast-food-outline' },
+  { label: 'Cafe', value: 'cafe-outline' },
+  { label: 'Mercado', value: 'basket-outline' },
   { label: 'Compras', value: 'cart-outline' },
+  { label: 'Roupas', value: 'shirt-outline' },
+  { label: 'Presentes', value: 'gift-outline' },
   { label: 'Transporte', value: 'car-outline' },
+  { label: 'Combustivel', value: 'flame-outline' },
+  { label: 'Onibus', value: 'bus-outline' },
+  { label: 'Bicicleta', value: 'bicycle-outline' },
+  { label: 'Viagem', value: 'airplane-outline' },
   { label: 'Moradia', value: 'home-outline' },
+  { label: 'Construcao', value: 'construct-outline' },
+  { label: 'Energia', value: 'flash-outline' },
+  { label: 'Agua', value: 'water-outline' },
   { label: 'Servicos', value: 'wifi-outline' },
+  { label: 'Celular', value: 'phone-portrait-outline' },
+  { label: 'Cartao', value: 'card-outline' },
+  { label: 'Carteira', value: 'wallet-outline' },
+  { label: 'Dinheiro', value: 'cash-outline' },
   { label: 'Saude', value: 'medical-outline' },
+  { label: 'Fitness', value: 'fitness-outline' },
   { label: 'Educacao', value: 'school-outline' },
+  { label: 'Livros', value: 'book-outline' },
+  { label: 'Lazer', value: 'game-controller-outline' },
+  { label: 'Cinema', value: 'film-outline' },
+  { label: 'Musica', value: 'musical-notes-outline' },
+  { label: 'Pets', value: 'paw-outline' },
+  { label: 'Trabalho', value: 'business-outline' },
+  { label: 'Manutencao', value: 'hammer-outline' },
   { label: 'Outros', value: 'ellipsis-horizontal' },
 ];
 
@@ -639,7 +664,6 @@ function ExpenseCard({
   isDeleting: boolean;
   onDelete: () => void;
 }) {
-  const palette = useThemePalette();
   const typeLabel: Record<ExpenseType, string> = {
     INSTALLMENT: expense.installmentNumber
       ? `Parcela ${expense.installmentNumber}/${expense.installmentTotal}`
@@ -649,7 +673,7 @@ function ExpenseCard({
   };
 
   return (
-    <View className="gap-3 rounded-2xl border border-border bg-card p-4">
+    <View className="relative gap-3 rounded-2xl border border-border bg-card p-4">
       <View className="flex-row items-start gap-3">
         <View
           className="h-11 w-11 items-center justify-center rounded-full"
@@ -666,19 +690,25 @@ function ExpenseCard({
         <Text className="text-base font-semibold text-foreground">
           {formatCurrencyBr(expense.amount)}
         </Text>
-      </View>
-      <Pressable
-        accessibilityLabel="Remover gasto"
-        accessibilityRole="button"
-        className="self-end p-2"
-        disabled={isDeleting}
-        onPress={onDelete}>
-        <Ionicons
-          color={isDeleting ? palette.mutedForeground : '#ef6358'}
-          name="trash-outline"
-          size={20}
+        <CardActionsMenu
+          accessibilityLabel="Abrir acoes do gasto"
+          actions={[
+            {
+              disabled: true,
+              label: 'Editar',
+              onPress: () => undefined,
+            },
+            {
+              disabled: isDeleting,
+              label: 'Excluir',
+              loading: isDeleting,
+              loadingLabel: 'Excluindo...',
+              onPress: onDelete,
+              variant: 'destructive',
+            },
+          ]}
         />
-      </Pressable>
+      </View>
     </View>
   );
 }
@@ -891,13 +921,33 @@ function CategoryFormDrawer({
   onClose: () => void;
   onSubmit: (data: ExpenseCategoryFormData) => void;
 }) {
+  const palette = useThemePalette();
+
   return (
     <BottomDrawer maxHeight="90%" onClose={onClose} visible={isOpen}>
       <Text className="text-xl font-semibold text-foreground">Nova categoria</Text>
       <FormProvider {...form}>
         <ControlledInput label="Nome" name="name" placeholder="Ex: Alimentacao" />
         <ControlledColorSwatches label="Cor" name="color" />
-        <ControlledSelect label="Icone" name="icon" options={categoryIconOptions} />
+        <ControlledSelect
+          label="Icone"
+          name="icon"
+          options={categoryIconOptions}
+          renderOption={(option, { selected }) => (
+            <CategoryIconSelectOption
+              color={selected ? palette.primary : palette.foreground}
+              label={option.label}
+              value={option.value}
+            />
+          )}
+          renderValue={(option) => (
+            <CategoryIconSelectOption
+              color={palette.foreground}
+              label={option.label}
+              value={option.value}
+            />
+          )}
+        />
         <View className="flex-row gap-2 pt-2">
           <Button className="flex-1" variant="secondary" onPress={onClose}>
             Cancelar
@@ -908,6 +958,25 @@ function CategoryFormDrawer({
         </View>
       </FormProvider>
     </BottomDrawer>
+  );
+}
+
+function CategoryIconSelectOption({
+  color,
+  label,
+  value,
+}: {
+  color: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <View className="flex-row items-center gap-3">
+      <View className="h-9 w-9 items-center justify-center rounded-full bg-secondary">
+        <Ionicons color={color} name={getCategoryIcon(value)} size={20} />
+      </View>
+      <Text className="text-base font-semibold text-foreground">{label}</Text>
+    </View>
   );
 }
 

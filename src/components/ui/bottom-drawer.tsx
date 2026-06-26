@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  InteractionManager,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -36,10 +37,28 @@ export function BottomDrawer({
   const animationProgress = useRef(new Animated.Value(visible ? 0 : 1)).current;
   const animationRef = useRef<ReturnType<typeof Animated.timing> | null>(null);
   const onClosedRef = useRef(onClosed);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
     onClosedRef.current = onClosed;
   }, [onClosed]);
+
+  const notifyClosedAfterInteractions = () => {
+    requestAnimationFrame(() => {
+      InteractionManager.runAfterInteractions(() => {
+        if (isMountedRef.current) {
+          onClosedRef.current?.();
+        }
+      });
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      animationRef.current?.stop();
+    };
+  }, []);
 
   useEffect(() => {
     animationRef.current?.stop();
@@ -56,6 +75,13 @@ export function BottomDrawer({
       animationRef.current.start();
     } else {
       Keyboard.dismiss();
+      if (Platform.OS === 'ios') {
+        animationProgress.setValue(1);
+        setIsPresented(false);
+        notifyClosedAfterInteractions();
+        return;
+      }
+
       animationRef.current = Animated.timing(animationProgress, {
         duration: 180,
         easing: Easing.in(Easing.cubic),
@@ -63,9 +89,9 @@ export function BottomDrawer({
         useNativeDriver: Platform.OS !== 'web',
       });
       animationRef.current.start(({ finished }) => {
-        if (finished) {
+        if (finished && isMountedRef.current) {
           setIsPresented(false);
-          onClosedRef.current?.();
+          notifyClosedAfterInteractions();
         }
       });
     }

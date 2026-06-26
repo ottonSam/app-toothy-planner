@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { createCalendar, listCalendars, updateCalendar } from '@/api/calendars';
 import { listGoals } from '@/api/goals';
+import { CardActionsMenu } from '@/components/card-actions-menu';
 import { ControlledDateInput } from '@/components/forms/controlled-date-input';
 import { ControlledInput } from '@/components/forms/controlled-input';
 import { ListRequestState } from '@/components/list-request-state';
@@ -185,48 +186,67 @@ function CalendarCard({
   onEdit: () => void;
   onViewWeek: () => void;
 }) {
+  const palette = useThemePalette();
   const linkedGoals = calendar.goalIds
     .map((goalId) => goals.find((goal) => goal.id === goalId))
     .filter((goal): goal is GoalResponse => Boolean(goal));
 
   return (
-    <View className="gap-3 rounded-2xl border border-border bg-card p-4">
+    <View className="relative gap-3 rounded-2xl border border-border bg-card p-4">
       <View className="flex-row items-start justify-between gap-3">
         <View className="flex-1">
           <Text className="text-lg font-semibold text-foreground">{calendar.description}</Text>
-          <Text className="text-sm text-muted-foreground">{calendar.weeks} semanas</Text>
-        </View>
-        <Text className="rounded-full bg-success px-3 py-1 text-xs font-semibold text-white">
-          Ativo
-        </Text>
-      </View>
-      <Text className="text-sm text-muted-foreground">
-        Inicio em {formatDateBr(calendar.starts)}.
-      </Text>
-      <Text className="text-sm text-muted-foreground">
-        Semana de {weekDayLabels[calendar.weekStartsOn]} a {weekDayLabels[calendar.weekEndsOn]}.
-      </Text>
-      <View className="gap-2 rounded-xl bg-muted p-3">
-        <Text className="text-xs font-semibold uppercase text-muted-foreground">
-          Objetivos vinculados
-        </Text>
-        {linkedGoals.length ? (
-          linkedGoals.map((goal) => (
-            <Text className="text-sm font-semibold text-foreground" key={goal.id}>
-              {goal.name}
+          <View className="flex-row items-center gap-2">
+            <Text className="text-sm text-muted-foreground">{calendar.weeks} semanas</Text>
+            <Text className="rounded-full bg-success px-3 py-1 text-xs font-semibold text-white">
+              Ativo
             </Text>
-          ))
-        ) : (
-          <Text className="text-sm text-muted-foreground">Nenhum objetivo vinculado.</Text>
-        )}
+          </View>
+        </View>
+        <CardActionsMenu
+          accessibilityLabel="Abrir acoes do calendario"
+          actions={[
+            { label: 'Editar', onPress: onEdit },
+            {
+              disabled: true,
+              label: 'Excluir',
+              onPress: () => undefined,
+              variant: 'destructive',
+            },
+          ]}
+        />
       </View>
-      <View className="flex-row gap-2">
-        <Button className="flex-1" size="sm" variant="secondary" onPress={onEdit}>
-          Editar
-        </Button>
-        <Button className="flex-1" size="sm" onPress={onViewWeek}>
-          Ver semana
-        </Button>
+
+      <View className="flex-row items-center gap-3">
+        <View className="flex-1 gap-3">
+          <Text className="text-sm text-muted-foreground">
+            Inicio em {formatDateBr(calendar.starts)}.
+          </Text>
+          <Text className="text-sm text-muted-foreground">
+            Semana de {weekDayLabels[calendar.weekStartsOn]} a {weekDayLabels[calendar.weekEndsOn]}.
+          </Text>
+          <View className="gap-2 rounded-xl bg-muted p-3">
+            <Text className="text-xs font-semibold uppercase text-muted-foreground">
+              Objetivos vinculados
+            </Text>
+            {linkedGoals.length ? (
+              linkedGoals.map((goal) => (
+                <Text className="text-sm font-semibold text-foreground" key={goal.id}>
+                  {goal.name}
+                </Text>
+              ))
+            ) : (
+              <Text className="text-sm text-muted-foreground">Nenhum objetivo vinculado.</Text>
+            )}
+          </View>
+        </View>
+        <Pressable
+          accessibilityLabel="Visualizar semana"
+          accessibilityRole="button"
+          className="h-12 w-12 items-center justify-center rounded-full bg-primary"
+          onPress={onViewWeek}>
+          <Ionicons color={palette.background} name="chevron-forward" size={24} />
+        </Pressable>
       </View>
     </View>
   );

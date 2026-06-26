@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { listCalendars } from '@/api/calendars';
 import { createGoal, deleteGoal, listGoals, updateGoal } from '@/api/goals';
 import { ActionConfirmationDrawer } from '@/components/action-confirmation-drawer';
+import { CardActionsMenu } from '@/components/card-actions-menu';
 import { DeleteConfirmationDrawer } from '@/components/delete-confirmation-drawer';
 import { ControlledInput } from '@/components/forms/controlled-input';
 import { ControlledSelect } from '@/components/forms/controlled-select';
@@ -301,7 +302,7 @@ function GoalCard({
   return (
     <View
       className={[
-        'gap-3 rounded-2xl border bg-card p-4',
+        'relative gap-3 rounded-2xl border bg-card p-4',
         goal.isComplete ? 'border-success/50' : 'border-border',
       ].join(' ')}>
       <View className="flex-row items-start justify-between gap-3">
@@ -316,6 +317,36 @@ function GoalCard({
             </Text>
           ) : null}
         </View>
+        <View className="items-end gap-2">
+          <CardActionsMenu
+            accessibilityLabel="Abrir acoes do objetivo"
+            actions={[
+              {
+                disabled: goal.isComplete,
+                label: 'Editar',
+                onPress: () => onEdit(goal),
+              },
+              {
+                disabled: goal.isComplete || isCompleting,
+                label: 'Concluir',
+                loading: isCompleting,
+                loadingLabel: 'Concluindo...',
+                onPress: () => onComplete(goal),
+              },
+              {
+                disabled: isDeleting,
+                label: 'Excluir',
+                loading: isDeleting,
+                loadingLabel: 'Excluindo...',
+                onPress: () => onDelete(goal),
+                variant: 'destructive',
+              },
+            ]}
+          />
+        </View>
+      </View>
+
+      <View className="flex-row gap-2">
         <Text
           className={[
             'rounded-full px-3 py-1 text-xs font-semibold',
@@ -323,30 +354,6 @@ function GoalCard({
           ].join(' ')}>
           {goal.isComplete ? 'Concluido' : 'Pendente'}
         </Text>
-      </View>
-      <View className="flex-row gap-2">
-        {!goal.isComplete ? (
-          <>
-            <Button className="flex-1" size="sm" variant="secondary" onPress={() => onEdit(goal)}>
-              Editar
-            </Button>
-            <Button
-              className="flex-1"
-              isLoading={isCompleting}
-              size="sm"
-              onPress={() => onComplete(goal)}>
-              Concluir
-            </Button>
-          </>
-        ) : null}
-        <Button
-          className="flex-1"
-          isLoading={isDeleting}
-          size="sm"
-          variant="destructive"
-          onPress={() => onDelete(goal)}>
-          Excluir
-        </Button>
       </View>
     </View>
   );

@@ -11,6 +11,7 @@ import {
   listExpenseWallets,
   updateExpenseWallet,
 } from '@/api/financial-manager';
+import { CardActionsMenu } from '@/components/card-actions-menu';
 import { ControlledInput } from '@/components/forms/controlled-input';
 import { ListRequestState } from '@/components/list-request-state';
 import { MutationStatusDrawer } from '@/components/mutation-status-drawer';
@@ -171,8 +172,10 @@ function WalletCard({
   onSelect: () => void;
   wallet: ExpenseWalletResponse;
 }) {
+  const palette = useThemePalette();
+
   return (
-    <View className="gap-4 rounded-2xl border border-border bg-card p-4">
+    <View className="relative gap-4 rounded-2xl border border-border bg-card p-4">
       <View className="flex-row items-start justify-between gap-3">
         <View className="flex-1 gap-1">
           <Text className="text-lg font-semibold text-foreground">{wallet.description}</Text>
@@ -180,20 +183,35 @@ function WalletCard({
             Meta por ciclo: {formatCurrencyBr(wallet.spendingGoal)}
           </Text>
         </View>
-        <View className="rounded-full bg-secondary px-3 py-1">
-          <Text className="text-xs font-semibold text-foreground">
-            Fecha dia {wallet.cycleEndDay}
-          </Text>
-        </View>
+        <CardActionsMenu
+          accessibilityLabel="Abrir acoes da carteira"
+          actions={[
+            { label: 'Editar', onPress: onEdit },
+            {
+              disabled: true,
+              label: 'Excluir',
+              onPress: () => undefined,
+              variant: 'destructive',
+            },
+          ]}
+        />
       </View>
 
-      <View className="flex-row gap-2">
-        <Button className="flex-1" variant="secondary" onPress={onEdit}>
-          Editar
-        </Button>
-        <Button className="flex-1" onPress={onSelect}>
-          Ver ciclos
-        </Button>
+      <View className="flex-row items-center gap-3">
+        <View className="flex-1">
+          <View className="self-start rounded-full bg-secondary px-3 py-1">
+            <Text className="text-xs font-semibold text-foreground">
+              Fecha dia {wallet.cycleEndDay}
+            </Text>
+          </View>
+        </View>
+        <Pressable
+          accessibilityLabel="Visualizar ciclos"
+          accessibilityRole="button"
+          className="h-12 w-12 items-center justify-center rounded-full bg-primary"
+          onPress={onSelect}>
+          <Ionicons color={palette.background} name="chevron-forward" size={24} />
+        </Pressable>
       </View>
     </View>
   );
