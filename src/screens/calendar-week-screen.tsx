@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import {
   createActivity,
+  deleteActivity,
   listWeekActivities,
   registerCountProgress,
   registerDaysProgress,
@@ -14,6 +15,8 @@ import {
   updateActivity,
 } from '@/api/activities';
 import { createWeeklyReport, listCalendarReports } from '@/api/reports';
+import { CardActionsMenu } from '@/components/card-actions-menu';
+import { DeleteConfirmationDrawer } from '@/components/delete-confirmation-drawer';
 import { ControlledInput } from '@/components/forms/controlled-input';
 import { ControlledSelect } from '@/components/forms/controlled-select';
 import { ListRequestState } from '@/components/list-request-state';
@@ -65,6 +68,10 @@ export function CalendarWeekScreen({ calendar, onBack }: CalendarWeekScreenProps
   const [isReportFormOpen, setIsReportFormOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<ActivityResponse | null>(null);
   const [progressActivity, setProgressActivity] = useState<ActivityResponse | null>(null);
+  const [deletingActivityId, setDeletingActivityId] = useState<string | null>(null);
+  const [activityPendingDeletion, setActivityPendingDeletion] = useState<ActivityResponse | null>(
+    null
+  );
   const activitiesQuery = useQuery({
     queryKey: queryKeys.weekActivities(calendar.id, week),
     queryFn: () => listWeekActivities(calendar.id, week),
@@ -124,6 +131,17 @@ export function CalendarWeekScreen({ calendar, onBack }: CalendarWeekScreenProps
   const invalidateWeek = async () => {
     await queryClient.invalidateQueries({ queryKey: queryKeys.weekActivities(calendar.id, week) });
   };
+
+  const deleteActivityMutation = useMutation({
+    mutationFn: deleteActivity,
+    onError: feedback.showError,
+    onMutate: (activityId) => setDeletingActivityId(activityId),
+    onSettled: () => setDeletingActivityId(null),
+    onSuccess: async () => {
+      await invalidateWeek();
+      feedback.showSuccess('Atividade removida com sucesso.');
+    },
+  });
 
   const activities = activitiesQuery.data ?? [];
   const progressPercent = activities.length
@@ -225,7 +243,9 @@ export function CalendarWeekScreen({ calendar, onBack }: CalendarWeekScreenProps
           renderItem={(activity) => (
             <ActivityCard
               activity={activity}
+              isDeleting={deletingActivityId === activity.id}
               key={activity.id}
+              onDelete={() => setActivityPendingDeletion(activity)}
               onEdit={() => openEditActivityForm(activity)}
               onProgress={() => setProgressActivity(activity)}
             />
@@ -278,6 +298,18 @@ export function CalendarWeekScreen({ calendar, onBack }: CalendarWeekScreenProps
         onClose={() => setIsReportFormOpen(false)}
         onSubmit={(data) => createReportMutation.mutate(data)}
       />
+      <DeleteConfirmationDrawer
+        description="A atividade sera removida desta semana. Esta acao nao pode ser desfeita."
+        itemName={activityPendingDeletion?.description}
+        onCancel={() => setActivityPendingDeletion(null)}
+        onConfirm={() => {
+          if (activityPendingDeletion) {
+            deleteActivityMutation.mutate(activityPendingDeletion.id);
+          }
+        }}
+        title="Excluir atividade?"
+        visible={Boolean(activityPendingDeletion)}
+      />
       <MutationStatusDrawer
         message={feedback.message}
         onClose={feedback.closeFeedback}
@@ -289,10 +321,14 @@ export function CalendarWeekScreen({ calendar, onBack }: CalendarWeekScreenProps
 
 function ActivityCard({
   activity,
+  isDeleting,
+  onDelete,
   onEdit,
   onProgress,
 }: {
   activity: ActivityResponse;
+  isDeleting: boolean;
+  onDelete: () => void;
   onEdit: () => void;
   onProgress: () => void;
 }) {
@@ -303,7 +339,7 @@ function ActivityCard({
   const percent = Math.round(getActivityProgressPercent(activity));
 
   return (
-    <View className="gap-3 rounded-2xl border border-border bg-card p-4">
+    <View className="relative gap-3 rounded-2xl border border-border bg-card p-4">
       <View className="flex-row items-start justify-between gap-3">
         <View className="flex-1 gap-1">
           <Text className="text-lg font-semibold text-foreground">{activity.description}</Text>
@@ -312,29 +348,38 @@ function ActivityCard({
             {formatDateBr(activity.weekEndsAt)}
           </Text>
         </View>
-        <Text className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-foreground">
-          {percent}%
-        </Text>
+        <CardActionsMenu
+          accessibilityLabel="Abrir acoes da atividade"
+          actions={[
+            { label: 'Editar', onPress: onEdit },
+            { label: 'Marcar progresso', onPress: onProgress },
+            {
+              disabled: isDeleting,
+              label: 'Excluir',
+              loading: isDeleting,
+              loadingLabel: 'Excluindo...',
+              onPress: onDelete,
+              variant: 'destructive',
+            },
+          ]}
+        />
       </View>
       <View className="h-3 overflow-hidden rounded-full bg-muted">
         <View className="h-full bg-primary" style={{ width: `${Math.min(percent, 100)}%` }} />
       </View>
-      <Text className="text-sm text-muted-foreground">
-        Progresso: {displayProgress}. Meta: {displayGoal}.
-      </Text>
+      <View className="flex-row items-center justify-between gap-3">
+        <Text className="flex-1 text-sm text-muted-foreground">
+          Progresso: {displayProgress}. Meta: {displayGoal}.
+        </Text>
+        <Text className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-foreground">
+          {percent}%
+        </Text>
+      </View>
       {activity.progressDays.length ? (
         <Text className="text-sm text-muted-foreground">
           Dias: {activity.progressDays.map((day) => weekDayLabels[day]).join(', ')}
         </Text>
       ) : null}
-      <View className="flex-row gap-2">
-        <Button className="flex-1" variant="secondary" onPress={onEdit}>
-          Editar
-        </Button>
-        <Button className="flex-1" onPress={onProgress}>
-          Marcar progresso
-        </Button>
-      </View>
     </View>
   );
 }

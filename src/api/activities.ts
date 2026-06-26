@@ -36,6 +36,12 @@ export function updateActivity(id: string, body: ActivityRequest) {
   });
 }
 
+export function deleteActivity(id: string) {
+  return apiRequest<void>(`/activities/${id}`, {
+    method: 'DELETE',
+  });
+}
+
 export function registerDaysProgress(body: { activityId: string; day: WeekDay }) {
   return apiRequest<ActivityResponse, typeof body>('/activities/progress/days', {
     method: 'POST',
