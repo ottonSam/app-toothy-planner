@@ -26,6 +26,11 @@ export type DietEntryRequest = {
   entryDate: string;
 };
 
+export type DietEntryUpdateRequest = {
+  quantity: number;
+  unit: DietEntryUnit;
+};
+
 export function getDietMetrics(date: string) {
   return apiRequest<DietMetricsResponse>(`/diet/metrics?date=${encodeURIComponent(date)}`, {
     schema: dietMetricsResponseSchema,
@@ -68,6 +73,14 @@ export function listFoods(name = '') {
 export function createDietEntry(body: DietEntryRequest) {
   return apiRequest<DietEntryResponse, DietEntryRequest>('/diet/entries', {
     method: 'POST',
+    body,
+    schema: dietEntryResponseSchema,
+  });
+}
+
+export function updateDietEntry(entryId: string, body: DietEntryUpdateRequest) {
+  return apiRequest<DietEntryResponse, DietEntryUpdateRequest>(`/diet/entries/${entryId}`, {
+    method: 'PUT',
     body,
     schema: dietEntryResponseSchema,
   });

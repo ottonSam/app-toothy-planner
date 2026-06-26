@@ -13,11 +13,13 @@ import {
   getDietMetrics,
   updateDailyDietGoal,
   updateDefaultDietGoal,
+  updateDietEntry,
 } from '@/api/diet';
 import { ControlledDateInput } from '@/components/forms/controlled-date-input';
 import { ControlledFoodAutocomplete } from '@/components/forms/controlled-food-autocomplete';
 import { ControlledInput } from '@/components/forms/controlled-input';
 import { ControlledSelect } from '@/components/forms/controlled-select';
+import { CardActionsMenu } from '@/components/card-actions-menu';
 import { DeleteConfirmationDrawer } from '@/components/delete-confirmation-drawer';
 import { ListRequestState } from '@/components/list-request-state';
 import { MutationStatusDrawer } from '@/components/mutation-status-drawer';
@@ -60,6 +62,7 @@ export function DietScreen({ navigation }: DietScreenProps) {
   const [isEntryFormOpen, setIsEntryFormOpen] = useState(false);
   const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+  const [editingEntry, setEditingEntry] = useState<DietEntryResponse | null>(null);
   const [entryPendingDeletion, setEntryPendingDeletion] = useState<DietEntryResponse | null>(null);
 
   const dateForm = useForm<{ date: string }>({
@@ -111,6 +114,27 @@ export function DietScreen({ navigation }: DietScreenProps) {
       entryForm.reset({ foodName: '', quantity: '', unit: 'GRAMS' });
       setIsEntryFormOpen(false);
       feedback.showSuccess('Alimento adicionado ao dia.');
+    },
+  });
+
+  const entryUpdateMutation = useMutation({
+    mutationFn: (data: DietEntryFormData) => {
+      if (!editingEntry) {
+        throw new Error('Selecione uma entrada para editar.');
+      }
+
+      return updateDietEntry(editingEntry.id, {
+        quantity: parseDecimal(data.quantity),
+        unit: data.unit,
+      });
+    },
+    onError: feedback.showError,
+    onSuccess: async () => {
+      await invalidateDietDate();
+      entryForm.reset({ foodName: '', quantity: '', unit: 'GRAMS' });
+      setEditingEntry(null);
+      setIsEntryFormOpen(false);
+      feedback.showSuccess('Entrada atualizada com sucesso.');
     },
   });
 
@@ -173,6 +197,28 @@ export function DietScreen({ navigation }: DietScreenProps) {
       scope,
     });
     setIsGoalFormOpen(true);
+  };
+
+  const openCreateEntryForm = () => {
+    setEditingEntry(null);
+    entryForm.reset({ foodName: '', quantity: '', unit: 'GRAMS' });
+    setIsEntryFormOpen(true);
+  };
+
+  const openEditEntryForm = (entry: DietEntryResponse) => {
+    setEditingEntry(entry);
+    entryForm.reset({
+      foodName: entry.food.name,
+      quantity: formatFormNumber(entry.quantity),
+      unit: entry.unit,
+    });
+    setIsEntryFormOpen(true);
+  };
+
+  const closeEntryForm = () => {
+    setIsEntryFormOpen(false);
+    setEditingEntry(null);
+    entryForm.reset({ foodName: '', quantity: '', unit: 'GRAMS' });
   };
 
   return (
@@ -242,7 +288,7 @@ export function DietScreen({ navigation }: DietScreenProps) {
           </Button>
         </View>
 
-        <Button onPress={() => setIsEntryFormOpen(true)}>Adicionar alimento</Button>
+        <Button onPress={openCreateEntryForm}>Adicionar alimento</Button>
 
         <View className="gap-3">
           <View className="flex-row items-center justify-between">
@@ -259,14 +305,16 @@ export function DietScreen({ navigation }: DietScreenProps) {
             isLoading={metricsQuery.isLoading}
             onRetry={() => metricsQuery.refetch()}
             renderEmptyAction={() => (
-              <Button onPress={() => setIsEntryFormOpen(true)}>Adicionar alimento</Button>
+              <Button onPress={openCreateEntryForm}>Adicionar alimento</Button>
             )}
             renderItem={(entry) => (
               <DietEntryCard
                 entry={entry}
                 isDeleting={deletingEntryId === entry.id}
+                isEditing={entryUpdateMutation.isPending && editingEntry?.id === entry.id}
                 key={entry.id}
                 onDelete={() => setEntryPendingDeletion(entry)}
+                onEdit={() => openEditEntryForm(entry)}
               />
             )}
           />
@@ -274,11 +322,14 @@ export function DietScreen({ navigation }: DietScreenProps) {
       </ScreenScrollView>
 
       <DietEntryFormDrawer
+        editingEntry={editingEntry}
         form={entryForm}
         isOpen={isEntryFormOpen}
-        isPending={entryMutation.isPending}
-        onClose={() => setIsEntryFormOpen(false)}
-        onSubmit={(data) => entryMutation.mutate(data)}
+        isPending={entryMutation.isPending || entryUpdateMutation.isPending}
+        onClose={closeEntryForm}
+        onSubmit={(data) =>
+          editingEntry ? entryUpdateMutation.mutate(data) : entryMutation.mutate(data)
+        }
       />
       <DietGoalFormDrawer
         form={goalForm}
@@ -388,20 +439,49 @@ function MacroCard({
   unit: string;
 }) {
   const consumed = goal - remaining;
+  const safeGoal = Math.max(goal, 0);
+  const safeConsumed = Math.max(consumed, 0);
+  const overflow = Math.max(safeConsumed - safeGoal, 0);
+  const barTotal = Math.max(safeGoal, safeConsumed, 1);
+  const consumedWidth = safeGoal > 0 ? Math.min(safeConsumed, safeGoal) / barTotal : 0;
+  const overflowWidth = overflow / barTotal;
+  const remainingLabel = remaining < 0 ? 'Excedido' : 'Restante';
 
   return (
-    <View className="min-h-24 flex-1 justify-between rounded-xl bg-muted p-3">
-      <Text className="text-xs font-semibold uppercase text-muted-foreground">{label}</Text>
-      <Text
-        className={[
-          'text-xl font-semibold',
-          remaining < 0 ? 'text-destructive' : 'text-foreground',
-        ].join(' ')}>
-        {formatMacro(remaining)} {unit}
-      </Text>
-      <Text className="text-xs text-muted-foreground">
-        {formatMacro(consumed)} de {formatMacro(goal)}
-      </Text>
+    <View className="min-h-32 flex-1 justify-between gap-3 rounded-xl bg-muted p-3">
+      <View className="gap-1">
+        <Text className="text-xs font-semibold uppercase text-muted-foreground">{label}</Text>
+        <Text
+          className={[
+            'text-xl font-semibold',
+            remaining < 0 ? 'text-destructive' : 'text-foreground',
+          ].join(' ')}>
+          {formatMacro(Math.abs(remaining))} {unit}
+        </Text>
+        <Text className="text-xs text-muted-foreground">{remainingLabel}</Text>
+      </View>
+
+      <View className="gap-2">
+        <View className="h-3 overflow-hidden rounded-full bg-background">
+          <View className="h-full flex-row">
+            <View className="h-full bg-primary" style={{ width: `${consumedWidth * 100}%` }} />
+            {overflowWidth > 0 ? (
+              <View
+                className="h-full bg-destructive"
+                style={{ width: `${overflowWidth * 100}%` }}
+              />
+            ) : null}
+          </View>
+        </View>
+        <View className="flex-row justify-between gap-2">
+          <Text className="text-xs text-muted-foreground">
+            {formatMacro(safeConsumed)} {unit}
+          </Text>
+          <Text className="text-xs font-semibold text-foreground">
+            Total {formatMacro(goal)} {unit}
+          </Text>
+        </View>
+      </View>
     </View>
   );
 }
@@ -409,14 +489,18 @@ function MacroCard({
 function DietEntryCard({
   entry,
   isDeleting,
+  isEditing,
   onDelete,
+  onEdit,
 }: {
   entry: DietEntryResponse;
   isDeleting: boolean;
+  isEditing: boolean;
   onDelete: () => void;
+  onEdit: () => void;
 }) {
   return (
-    <View className="gap-3 rounded-2xl border border-border bg-card p-4">
+    <View className="relative gap-3 rounded-2xl border border-border bg-card p-4">
       <View className="flex-row items-start justify-between gap-3">
         <View className="flex-1 gap-1">
           <Text className="text-lg font-semibold text-foreground">{entry.food.name}</Text>
@@ -427,6 +511,31 @@ function DietEntryCard({
             <Text className="text-xs text-muted-foreground">{entry.food.portionDescription}</Text>
           ) : null}
         </View>
+        <View className="items-end">
+          <CardActionsMenu
+            accessibilityLabel="Abrir acoes da entrada de dieta"
+            actions={[
+              {
+                disabled: isEditing,
+                label: 'Editar',
+                loading: isEditing,
+                loadingLabel: 'Editando...',
+                onPress: onEdit,
+              },
+              {
+                disabled: isDeleting,
+                label: 'Excluir',
+                loading: isDeleting,
+                loadingLabel: 'Excluindo...',
+                onPress: onDelete,
+                variant: 'destructive',
+              },
+            ]}
+          />
+        </View>
+      </View>
+
+      <View className="flex-row">
         <Text className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-foreground">
           {formatMacro(entry.kcal)} kcal
         </Text>
@@ -437,10 +546,6 @@ function DietEntryCard({
         <EntryMacro label="Carboidrato" value={entry.carbohydrate} />
         <EntryMacro label="Gordura" value={entry.fat} />
       </View>
-
-      <Button isLoading={isDeleting} variant="destructive" onPress={onDelete}>
-        Remover entrada
-      </Button>
     </View>
   );
 }
@@ -455,23 +560,39 @@ function EntryMacro({ label, value }: { label: string; value: number }) {
 }
 
 function DietEntryFormDrawer({
+  editingEntry,
   form,
   isOpen,
   isPending,
   onClose,
   onSubmit,
 }: {
+  editingEntry: DietEntryResponse | null;
   form: ReturnType<typeof useForm<DietEntryFormData>>;
   isOpen: boolean;
   isPending: boolean;
   onClose: () => void;
   onSubmit: (data: DietEntryFormData) => void;
 }) {
+  const isEditing = Boolean(editingEntry);
+
   return (
     <BottomDrawer maxHeight="90%" onClose={onClose} visible={isOpen}>
-      <Text className="text-xl font-semibold text-foreground">Adicionar alimento</Text>
+      <View>
+        <Text className="text-xl font-semibold text-foreground">
+          {isEditing ? 'Editar entrada' : 'Adicionar alimento'}
+        </Text>
+        {editingEntry ? (
+          <Text className="text-sm text-muted-foreground">
+            {editingEntry.food.name}
+            {editingEntry.food.portionDescription
+              ? ` - ${editingEntry.food.portionDescription}`
+              : ''}
+          </Text>
+        ) : null}
+      </View>
       <FormProvider {...form}>
-        <ControlledFoodAutocomplete label="Alimento" name="foodName" />
+        {isEditing ? null : <ControlledFoodAutocomplete label="Alimento" name="foodName" />}
         <ControlledSelect
           label="Unidade"
           name="unit"
@@ -491,7 +612,7 @@ function DietEntryFormDrawer({
             Cancelar
           </Button>
           <Button className="flex-1" isLoading={isPending} onPress={form.handleSubmit(onSubmit)}>
-            Adicionar
+            {isEditing ? 'Salvar' : 'Adicionar'}
           </Button>
         </View>
       </FormProvider>
