@@ -61,7 +61,8 @@ jobs:
 
           docker run --detach \
             --name toothy-planner-web-ci \
-            --env EXPO_PUBLIC_API_BASE_URL=https://api.example.com/api/v1 \
+            --env EXPO_PUBLIC_API_BASE_URL=/api/v1 \
+            --env API_PROXY_ORIGIN=https://api.example.com \
             toothy-planner-web:ci
 
           for attempt in {1..20}; do
@@ -75,7 +76,13 @@ jobs:
           done
 
           docker exec toothy-planner-web-ci \
-            grep -R -q 'https://api.example.com/api/v1' /usr/share/nginx/html
+            grep -R -q '/api/v1' /usr/share/nginx/html
+          docker exec toothy-planner-web-ci sh -c \
+            "! grep -R -q 'https://api.example.com' /usr/share/nginx/html"
+          docker exec toothy-planner-web-ci sh -c \
+            "nginx -T 2>&1 | grep -q 'proxy_pass https://api.example.com'"
+          docker exec toothy-planner-web-ci sh -c \
+            "nginx -T 2>&1 | grep -q 'proxy_cookie_domain'"
           docker exec toothy-planner-web-ci \
             test -f /usr/share/nginx/html/manifest.json
           docker exec toothy-planner-web-ci \
