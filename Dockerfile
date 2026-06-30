@@ -13,7 +13,8 @@ RUN npm run web:build
 
 FROM nginx:1.27-alpine
 
-ENV EXPO_PUBLIC_API_BASE_URL=http://localhost:8080/api/v1
+ENV EXPO_PUBLIC_API_BASE_URL=/api/v1
+ENV API_PROXY_ORIGIN=http://host.docker.internal:8080
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker-entrypoint.d/40-runtime-env.sh /docker-entrypoint.d/40-runtime-env.sh
