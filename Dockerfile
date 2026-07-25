@@ -6,7 +6,7 @@ ARG BASE_URL=__BASE_URL__
 ENV EXPO_PUBLIC_BASE_URL=${BASE_URL}
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm i
 
 COPY . .
 RUN npm run web:build
