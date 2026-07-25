@@ -129,6 +129,27 @@ export const profileImageFormSchema = z.object({
     .regex(/^data:image\/(png|jpeg|jpg|webp);base64,/, 'Selecione uma imagem valida.'),
 });
 
+export const focusSessionFormSchema = z.object({
+  focusMinutes: z
+    .string()
+    .trim()
+    .min(1, 'Informe o tempo de foco.')
+    .refine((value) => Number.isInteger(Number(value)), 'Informe minutos inteiros.')
+    .refine(
+      (value) => Number(value) >= 1 && Number(value) <= 180,
+      'O foco deve ter entre 1 e 180 minutos.'
+    ),
+  breakMinutes: z
+    .string()
+    .trim()
+    .min(1, 'Informe o tempo de descanso.')
+    .refine((value) => Number.isInteger(Number(value)), 'Informe minutos inteiros.')
+    .refine(
+      (value) => Number(value) >= 1 && Number(value) <= 60,
+      'O descanso deve ter entre 1 e 60 minutos.'
+    ),
+});
+
 const positiveDecimalString = (label: string) =>
   z
     .string()
@@ -211,6 +232,7 @@ export type WeeklyReportFormData = z.infer<typeof weeklyReportFormSchema>;
 export type ProfileFormData = z.infer<typeof profileFormSchema>;
 export type PasswordUpdateFormData = z.infer<typeof passwordUpdateFormSchema>;
 export type ProfileImageFormData = z.infer<typeof profileImageFormSchema>;
+export type FocusSessionFormData = z.infer<typeof focusSessionFormSchema>;
 export type ExpenseWalletFormData = z.infer<typeof expenseWalletFormSchema>;
 export type ExpenseFormData = z.infer<typeof expenseFormSchema>;
 export type AudioExpenseFormData = z.infer<typeof audioExpenseFormSchema>;

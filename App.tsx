@@ -17,6 +17,7 @@ import { getThemePalette, getThemeVariables } from '@/lib/theme';
 import type { RootDrawerParamList } from '@/navigation/types';
 import { CalendarsScreen } from '@/screens/calendars-screen';
 import { FinancialScreen } from '@/screens/financial-screen';
+import { FocusScreen } from '@/screens/focus-screen';
 import { LoginScreen } from '@/screens/login-screen';
 import { ObjectivesScreen } from '@/screens/objectives-screen';
 import { ProfileScreen } from '@/screens/profile-screen';
@@ -96,6 +97,13 @@ function AppContent() {
             {(props) => (
               <ProtectedScreen>
                 <CalendarsScreen {...props} />
+              </ProtectedScreen>
+            )}
+          </Drawer.Screen>
+          <Drawer.Screen name="Focus" options={{ title: 'Foco' }}>
+            {(props) => (
+              <ProtectedScreen>
+                <FocusScreen {...props} />
               </ProtectedScreen>
             )}
           </Drawer.Screen>

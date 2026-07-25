@@ -5,5 +5,6 @@ export type RootDrawerParamList = {
   Financial: undefined;
   Objectives: undefined;
   Calendars: undefined;
+  Focus: undefined;
   Profile: undefined;
 };

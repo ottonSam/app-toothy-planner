@@ -87,6 +87,15 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
             />
             <DrawerItem
               {...drawerItemStyle}
+              focused={currentRoute === 'Focus'}
+              icon={({ color, size }) => (
+                <Ionicons color={color} name="timer-outline" size={size} />
+              )}
+              label="Foco"
+              onPress={() => props.navigation.navigate('Focus')}
+            />
+            <DrawerItem
+              {...drawerItemStyle}
               focused={currentRoute === 'Profile'}
               icon={({ color, size }) => (
                 <Ionicons color={color} name="person-outline" size={size} />
