@@ -2,15 +2,15 @@
   "name": "toothy-planner",
   "version": "1.0.0",
   "scripts": {
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "start": "expo start",
+    "android": "node scripts/with-base-url.js start --android",
+    "ios": "node scripts/with-base-url.js start --ios",
+    "start": "node scripts/with-base-url.js start",
     "prebuild": "expo prebuild",
     "lint": "eslint \"**/*.{js,jsx,ts,tsx}\" && prettier -c \"**/*.{js,jsx,ts,tsx,json}\"",
     "format": "eslint \"**/*.{js,jsx,ts,tsx}\" --fix && prettier \"**/*.{js,jsx,ts,tsx,json}\" --write",
     "typecheck": "tsc --noEmit",
-    "web": "expo start --web",
-    "web:build": "expo export --platform web"
+    "web": "node scripts/with-base-url.js start --web",
+    "web:build": "node scripts/with-base-url.js export --platform web"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",

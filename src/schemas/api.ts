@@ -79,68 +79,16 @@ export const weeklyPerformanceReportResponseSchema = z.object({
   updatedAt: z.string(),
 });
 
-export const dietGoalResponseSchema = z.object({
-  kcal: z.number(),
-  protein: z.number(),
-  carbohydrate: z.number(),
-  fat: z.number(),
-});
-
-export const foodResponseSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  kcalPerGram: z.number(),
-  proteinPerGram: z.number(),
-  carbohydratePerGram: z.number(),
-  fatPerGram: z.number(),
-  kcalPerPortion: z.number(),
-  proteinPerPortion: z.number(),
-  carbohydratePerPortion: z.number(),
-  fatPerPortion: z.number(),
-  portionDescription: z.string(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
-
-export const foodSummaryResponseSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  portionDescription: z.string(),
-});
-
-export const dietEntryResponseSchema = z.object({
-  id: z.string().uuid(),
-  food: foodSummaryResponseSchema,
-  entryDate: z.string(),
-  quantity: z.number(),
-  unit: z.enum(['GRAMS', 'PORTIONS']),
-  kcal: z.number(),
-  protein: z.number(),
-  carbohydrate: z.number(),
-  fat: z.number(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
-
-export const dietMetricsResponseSchema = z.object({
-  date: z.string(),
-  goal: dietGoalResponseSchema,
-  consumed: dietGoalResponseSchema,
-  remaining: dietGoalResponseSchema,
-  entries: z.array(dietEntryResponseSchema),
-});
-
 export const expenseCategoryResponseSchema = z.object({
-  id: z.string().uuid(),
+  key: z.string(),
   name: z.string(),
   color: z.string(),
   icon: z.string(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
+  description: z.string(),
 });
 
 export const expenseCategorySummaryResponseSchema = z.object({
-  id: z.string().uuid(),
+  key: z.string(),
   name: z.string(),
   color: z.string(),
   icon: z.string(),
@@ -150,7 +98,8 @@ export const expenseWalletResponseSchema = z.object({
   id: z.string().uuid(),
   description: z.string(),
   spendingGoal: z.number(),
-  cycleEndDay: z.number(),
+  startsAt: z.string(),
+  targetSpendingDay: z.number(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -162,6 +111,7 @@ export const expenseCycleResponseSchema = z.object({
   referenceYear: z.number(),
   startsAt: z.string(),
   endsAt: z.string(),
+  targetSpendingDate: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -175,6 +125,7 @@ export const expenseResponseSchema = z.object({
   amount: z.number(),
   expenseDate: z.string(),
   type: z.enum(['ONE_TIME', 'INSTALLMENT', 'RECURRING']),
+  source: z.enum(['MANUAL', 'AI_TEXT', 'AI_AUDIO']),
   parentExpenseId: z.string().uuid().nullable(),
   installmentNumber: z.number().nullable(),
   installmentTotal: z.number().nullable(),
@@ -219,7 +170,9 @@ export const expenseCycleMetricsResponseSchema = z.object({
   spendingGoal: z.number(),
   totalSpent: z.number(),
   remainingAmount: z.number(),
-  remainingDailyAmount: z.number(),
+  remainingDailyAmount: z.number().nullable(),
+  spentUntilTargetDate: z.number(),
+  spentAfterTargetDate: z.number().nullable(),
   installmentTotalFromCurrentCycle: z.number(),
   recurringMonthlyTotal: z.number(),
   oneTimeTotal: z.number(),
@@ -236,9 +189,29 @@ export const expenseWalletMetricsResponseSchema = z.object({
   walletId: z.string().uuid(),
   description: z.string(),
   spendingGoal: z.number(),
-  cycleEndDay: z.number(),
+  startsAt: z.string(),
+  targetSpendingDay: z.number(),
   currentCycle: expenseCycleResponseSchema.nullable(),
   currentCycleMetrics: expenseCycleMetricsResponseSchema.nullable(),
   activeRecurringMonthlyTotal: z.number(),
   installmentTotalFromCurrentCycle: z.number(),
+});
+
+export const expenseTextResponseSchema = z.object({
+  type: z.enum(['ONE_TIME', 'INSTALLMENT', 'RECURRING']),
+  expense: expenseResponseSchema.nullable(),
+  installmentExpense: installmentExpenseResponseSchema.nullable(),
+  recurringExpense: recurringExpenseResponseSchema.nullable(),
+  generatedExpenses: z.array(expenseResponseSchema),
+});
+
+export const expenseAudioResponseSchema = z.object({
+  transcribedText: z.string(),
+  classification: z.object({
+    type: z.enum(['ONE_TIME', 'INSTALLMENT', 'RECURRING']),
+  }),
+  expense: expenseResponseSchema.nullable(),
+  installmentExpense: installmentExpenseResponseSchema.nullable(),
+  recurringExpense: recurringExpenseResponseSchema.nullable(),
+  generatedExpenses: z.array(expenseResponseSchema),
 });

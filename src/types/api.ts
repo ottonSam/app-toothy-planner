@@ -4,9 +4,8 @@ export type GoalType = 'LONG_TERM' | 'MEDIUM_TERM' | 'CALENDAR';
 
 export type ActivityType = 'DAYS' | 'COUNT' | 'TIME';
 
-export type DietEntryUnit = 'GRAMS' | 'PORTIONS';
-
 export type ExpenseType = 'ONE_TIME' | 'INSTALLMENT' | 'RECURRING';
+export type ExpenseSource = 'MANUAL' | 'AI_TEXT' | 'AI_AUDIO';
 
 export type WeekDay =
   | 'SUNDAY'
@@ -78,68 +77,16 @@ export type WeeklyPerformanceReportResponse = {
   updatedAt: string;
 };
 
-export type DietGoalResponse = {
-  kcal: number;
-  protein: number;
-  carbohydrate: number;
-  fat: number;
-};
-
-export type FoodResponse = {
-  id: string;
-  name: string;
-  kcalPerGram: number;
-  proteinPerGram: number;
-  carbohydratePerGram: number;
-  fatPerGram: number;
-  kcalPerPortion: number;
-  proteinPerPortion: number;
-  carbohydratePerPortion: number;
-  fatPerPortion: number;
-  portionDescription: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type FoodSummaryResponse = {
-  id: string;
-  name: string;
-  portionDescription: string;
-};
-
-export type DietEntryResponse = {
-  id: string;
-  food: FoodSummaryResponse;
-  entryDate: string;
-  quantity: number;
-  unit: DietEntryUnit;
-  kcal: number;
-  protein: number;
-  carbohydrate: number;
-  fat: number;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type DietMetricsResponse = {
-  date: string;
-  goal: DietGoalResponse;
-  consumed: DietGoalResponse;
-  remaining: DietGoalResponse;
-  entries: DietEntryResponse[];
-};
-
 export type ExpenseCategoryResponse = {
-  id: string;
+  key: string;
   name: string;
   color: string;
   icon: string;
-  createdAt: string;
-  updatedAt: string;
+  description: string;
 };
 
 export type ExpenseCategorySummaryResponse = {
-  id: string;
+  key: string;
   name: string;
   color: string;
   icon: string;
@@ -149,7 +96,8 @@ export type ExpenseWalletResponse = {
   id: string;
   description: string;
   spendingGoal: number;
-  cycleEndDay: number;
+  startsAt: string;
+  targetSpendingDay: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -161,6 +109,7 @@ export type ExpenseCycleResponse = {
   referenceYear: number;
   startsAt: string;
   endsAt: string;
+  targetSpendingDate: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -174,6 +123,7 @@ export type ExpenseResponse = {
   amount: number;
   expenseDate: string;
   type: ExpenseType;
+  source: ExpenseSource;
   parentExpenseId: string | null;
   installmentNumber: number | null;
   installmentTotal: number | null;
@@ -218,7 +168,9 @@ export type ExpenseCycleMetricsResponse = {
   spendingGoal: number;
   totalSpent: number;
   remainingAmount: number;
-  remainingDailyAmount: number;
+  remainingDailyAmount: number | null;
+  spentUntilTargetDate: number;
+  spentAfterTargetDate: number | null;
   installmentTotalFromCurrentCycle: number;
   recurringMonthlyTotal: number;
   oneTimeTotal: number;
@@ -233,9 +185,25 @@ export type ExpenseWalletMetricsResponse = {
   walletId: string;
   description: string;
   spendingGoal: number;
-  cycleEndDay: number;
+  startsAt: string;
+  targetSpendingDay: number;
   currentCycle: ExpenseCycleResponse | null;
   currentCycleMetrics: ExpenseCycleMetricsResponse | null;
   activeRecurringMonthlyTotal: number;
   installmentTotalFromCurrentCycle: number;
+};
+
+export type ExpenseTextResponse = {
+  type: ExpenseType;
+  expense: ExpenseResponse | null;
+  installmentExpense: InstallmentExpenseResponse | null;
+  recurringExpense: RecurringExpenseResponse | null;
+  generatedExpenses: ExpenseResponse[];
+};
+
+export type ExpenseAudioResponse = Omit<ExpenseTextResponse, 'type'> & {
+  transcribedText: string;
+  classification: {
+    type: ExpenseType;
+  };
 };

@@ -3,9 +3,11 @@ import { z } from 'zod';
 import { apiRequest } from '@/api/client';
 import {
   expenseCategoryResponseSchema,
+  expenseAudioResponseSchema,
   expenseCycleMetricsResponseSchema,
   expenseCycleResponseSchema,
   expenseResponseSchema,
+  expenseTextResponseSchema,
   expenseWalletMetricsResponseSchema,
   expenseWalletResponseSchema,
   installmentExpenseResponseSchema,
@@ -13,9 +15,11 @@ import {
 } from '@/schemas/api';
 import type {
   ExpenseCategoryResponse,
+  ExpenseAudioResponse,
   ExpenseCycleMetricsResponse,
   ExpenseCycleResponse,
   ExpenseResponse,
+  ExpenseTextResponse,
   ExpenseWalletMetricsResponse,
   ExpenseWalletResponse,
   InstallmentExpenseResponse,
@@ -32,24 +36,19 @@ const financialBase = '/financial-manager';
 export type ExpenseWalletRequest = {
   description: string;
   spendingGoal: number;
-  cycleEndDay: number;
-};
-
-export type ExpenseCategoryRequest = {
-  name: string;
-  color: string;
-  icon: string;
+  startsAt: string;
+  targetSpendingDay: number;
 };
 
 export type OneTimeExpenseRequest = {
-  categoryId: string;
+  category: string;
   description: string;
   amount: number;
   expenseDate: string;
 };
 
 export type InstallmentExpenseRequest = {
-  categoryId: string;
+  category: string;
   description: string;
   totalAmount?: number;
   installmentAmount?: number;
@@ -58,10 +57,21 @@ export type InstallmentExpenseRequest = {
 };
 
 export type RecurringExpenseRequest = {
-  categoryId: string;
+  category: string;
   description: string;
   amount: number;
   startsAt: string;
+};
+
+export type TextExpenseRequest = {
+  text: string;
+  referenceDate?: string;
+};
+
+export type AudioExpenseRequest = {
+  audioBase64: string;
+  contentType: string;
+  referenceDate?: string;
 };
 
 export function listExpenseWallets() {
@@ -125,17 +135,6 @@ export function listExpenseCategories() {
   });
 }
 
-export function createExpenseCategory(body: ExpenseCategoryRequest) {
-  return apiRequest<ExpenseCategoryResponse, ExpenseCategoryRequest>(
-    `${financialBase}/categories`,
-    {
-      method: 'POST',
-      body,
-      schema: expenseCategoryResponseSchema,
-    }
-  );
-}
-
 export function createOneTimeExpense(walletId: string, body: OneTimeExpenseRequest) {
   return apiRequest<ExpenseResponse, OneTimeExpenseRequest>(
     `${financialBase}/wallets/${walletId}/expenses`,
@@ -143,6 +142,28 @@ export function createOneTimeExpense(walletId: string, body: OneTimeExpenseReque
       method: 'POST',
       body,
       schema: expenseResponseSchema,
+    }
+  );
+}
+
+export function createExpenseFromText(walletId: string, body: TextExpenseRequest) {
+  return apiRequest<ExpenseTextResponse, TextExpenseRequest>(
+    `${financialBase}/wallets/${walletId}/expenses/text`,
+    {
+      method: 'POST',
+      body,
+      schema: expenseTextResponseSchema,
+    }
+  );
+}
+
+export function createExpenseFromAudio(walletId: string, body: AudioExpenseRequest) {
+  return apiRequest<ExpenseAudioResponse, AudioExpenseRequest>(
+    `${financialBase}/wallets/${walletId}/expenses/audio`,
+    {
+      method: 'POST',
+      body,
+      schema: expenseAudioResponseSchema,
     }
   );
 }

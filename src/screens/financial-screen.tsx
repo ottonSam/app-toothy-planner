@@ -12,6 +12,7 @@ import {
   updateExpenseWallet,
 } from '@/api/financial-manager';
 import { CardActionsMenu } from '@/components/card-actions-menu';
+import { ControlledDateInput } from '@/components/forms/controlled-date-input';
 import { ControlledInput } from '@/components/forms/controlled-input';
 import { ListRequestState } from '@/components/list-request-state';
 import { MutationStatusDrawer } from '@/components/mutation-status-drawer';
@@ -20,6 +21,7 @@ import { BottomDrawer } from '@/components/ui/bottom-drawer';
 import { Button } from '@/components/ui/button';
 import { useMutationFeedback } from '@/hooks/use-mutation-feedback';
 import { useThemePalette } from '@/hooks/use-theme-palette';
+import { formatDateBr, toDateInputValue } from '@/lib/date-utils';
 import { formatCurrencyBr } from '@/lib/financial-utils';
 import { queryKeys } from '@/lib/query-keys';
 import type { RootDrawerParamList } from '@/navigation/types';
@@ -43,15 +45,21 @@ export function FinancialScreen({ navigation }: FinancialScreenProps) {
   });
   const form = useForm<ExpenseWalletFormData>({
     resolver: zodResolver(expenseWalletFormSchema),
-    defaultValues: { cycleEndDay: '', description: '', spendingGoal: '' },
+    defaultValues: {
+      description: '',
+      spendingGoal: '',
+      startsAt: toDateInputValue(new Date()),
+      targetSpendingDay: '',
+    },
   });
 
   const walletMutation = useMutation({
     mutationFn: (data: ExpenseWalletFormData) => {
       const body = {
-        cycleEndDay: Number(data.cycleEndDay),
         description: data.description,
         spendingGoal: parseDecimal(data.spendingGoal),
+        startsAt: data.startsAt,
+        targetSpendingDay: Number(data.targetSpendingDay),
       };
 
       return editingWallet
@@ -82,16 +90,22 @@ export function FinancialScreen({ navigation }: FinancialScreenProps) {
 
   const openCreateForm = () => {
     setEditingWallet(null);
-    form.reset({ cycleEndDay: '', description: '', spendingGoal: '' });
+    form.reset({
+      description: '',
+      spendingGoal: '',
+      startsAt: toDateInputValue(new Date()),
+      targetSpendingDay: '',
+    });
     setIsFormOpen(true);
   };
 
   const openEditForm = (wallet: ExpenseWalletResponse) => {
     setEditingWallet(wallet);
     form.reset({
-      cycleEndDay: String(wallet.cycleEndDay),
       description: wallet.description,
       spendingGoal: String(wallet.spendingGoal).replace('.', ','),
+      startsAt: wallet.startsAt,
+      targetSpendingDay: String(wallet.targetSpendingDay),
     });
     setIsFormOpen(true);
   };
@@ -99,7 +113,12 @@ export function FinancialScreen({ navigation }: FinancialScreenProps) {
   const closeForm = () => {
     setIsFormOpen(false);
     setEditingWallet(null);
-    form.reset({ cycleEndDay: '', description: '', spendingGoal: '' });
+    form.reset({
+      description: '',
+      spendingGoal: '',
+      startsAt: toDateInputValue(new Date()),
+      targetSpendingDay: '',
+    });
   };
 
   if (selectedWallet) {
@@ -182,6 +201,9 @@ function WalletCard({
           <Text className="text-sm text-muted-foreground">
             Meta por ciclo: {formatCurrencyBr(wallet.spendingGoal)}
           </Text>
+          <Text className="text-sm text-muted-foreground">
+            Inicio: {formatDateBr(wallet.startsAt)}
+          </Text>
         </View>
         <CardActionsMenu
           accessibilityLabel="Abrir acoes da carteira"
@@ -201,7 +223,7 @@ function WalletCard({
         <View className="flex-1">
           <View className="self-start rounded-full bg-secondary px-3 py-1">
             <Text className="text-xs font-semibold text-foreground">
-              Fecha dia {wallet.cycleEndDay}
+              Alvo dia {wallet.targetSpendingDay}
             </Text>
           </View>
         </View>
@@ -245,12 +267,13 @@ function WalletFormDrawer({
           name="spendingGoal"
           placeholder="3000,00"
         />
+        <ControlledDateInput label="Data inicial" name="startsAt" />
         <ControlledInput
-          description="Dia em que o ciclo mensal termina."
+          description="Dia do ciclo usado para calcular o valor diario restante."
           keyboardType="number-pad"
-          label="Dia de encerramento"
-          name="cycleEndDay"
-          placeholder="15"
+          label="Dia alvo de gasto"
+          name="targetSpendingDay"
+          placeholder="10"
         />
         <View className="flex-row gap-2 pt-2">
           <Button className="flex-1" variant="secondary" onPress={onClose}>

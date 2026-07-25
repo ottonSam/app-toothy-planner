@@ -33,13 +33,13 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
     onSuccess: async () => {
       const user = await getCurrentUser();
       setAuthenticatedUser(user);
-      navigation.navigate('Diet');
+      navigation.navigate('Financial');
     },
   });
 
   useEffect(() => {
     if (status === 'authenticated') {
-      navigation.navigate('Diet');
+      navigation.navigate('Financial');
     }
   }, [navigation, status]);
 

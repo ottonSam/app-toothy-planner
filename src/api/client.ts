@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8080/api/v1';
+export const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL ?? 'http://localhost:8080/api/v1';
 
 type RequestOptions<TBody> = {
   body?: TBody;
@@ -19,24 +19,7 @@ const apiErrorMessagesPt: Record<string, string> = {
   'Category name already exists': 'Ja existe uma categoria com esse nome.',
   'Category not found': 'Categoria nao encontrada.',
   'Cycle not found': 'Ciclo financeiro nao encontrado.',
-  'DeepSeek API key is not configured': 'O servico de consulta nutricional nao esta configurado.',
-  'DeepSeek authentication failed': 'Nao foi possivel autenticar no servico nutricional.',
-  'DeepSeek nutrition lookup failed': 'Nao foi possivel consultar os dados nutricionais.',
-  'DeepSeek nutrition response is invalid': 'O servico retornou dados nutricionais invalidos.',
-  'Diet entry not found': 'Entrada de alimentacao nao encontrada.',
-  'Diet entry quantity must be greater than zero': 'A quantidade deve ser maior que zero.',
-  'Diet entry unit is required': 'Selecione a unidade da entrada.',
-  'Diet goal carbohydrate must be greater than or equal to zero':
-    'O carboidrato deve ser maior ou igual a zero.',
-  'Diet goal fat must be greater than or equal to zero':
-    'A gordura deve ser maior ou igual a zero.',
-  'Diet goal kcal must be greater than or equal to zero':
-    'As calorias devem ser maiores ou iguais a zero.',
-  'Diet goal protein must be greater than or equal to zero':
-    'A proteina deve ser maior ou igual a zero.',
   'Expense not found': 'Gasto nao encontrado.',
-  'Food name is required': 'Informe o nome do alimento.',
-  'Food not found': 'Alimento nao encontrado.',
   'Failed to fetch': 'Nao foi possivel conectar ao servidor. Verifique sua conexao.',
   'Inform either total amount or installment amount, but not both':
     'Informe o valor total ou o valor da parcela, mas nao os dois.',
@@ -78,13 +61,13 @@ export function getApiUrl(path: string) {
 
   if (path.startsWith('/api/')) {
     try {
-      return `${new URL(API_BASE_URL).origin}${path}`;
+      return `${new URL(BASE_URL).origin}${path}`;
     } catch {
       return path;
     }
   }
 
-  return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+  return `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
 export async function apiRequest<TResponse, TBody = unknown>(

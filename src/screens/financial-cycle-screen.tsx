@@ -1,12 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import {
-  createExpenseCategory,
+  createExpenseFromAudio,
+  createExpenseFromText,
   createInstallmentExpense,
   createOneTimeExpense,
   createRecurringExpense,
@@ -18,7 +19,6 @@ import {
   listExpenseCycles,
 } from '@/api/financial-manager';
 import { CardActionsMenu } from '@/components/card-actions-menu';
-import { ControlledColorSwatches } from '@/components/forms/controlled-color-swatches';
 import { ControlledDateInput } from '@/components/forms/controlled-date-input';
 import { ControlledInput } from '@/components/forms/controlled-input';
 import { ControlledSelect } from '@/components/forms/controlled-select';
@@ -34,10 +34,12 @@ import { formatDateBr, toDateInputValue } from '@/lib/date-utils';
 import { formatCurrencyBr, formatReferenceMonth } from '@/lib/financial-utils';
 import { queryKeys } from '@/lib/query-keys';
 import {
-  expenseCategoryFormSchema,
+  audioExpenseFormSchema,
   expenseFormSchema,
-  type ExpenseCategoryFormData,
+  textExpenseFormSchema,
+  type AudioExpenseFormData,
   type ExpenseFormData,
+  type TextExpenseFormData,
 } from '@/schemas/forms';
 import type {
   ExpenseCategoryResponse,
@@ -55,40 +57,11 @@ type FinancialCycleScreenProps = {
 
 type CycleView = 'expenses' | 'metrics';
 
-const categoryIconOptions = [
-  { label: 'Alimentacao', value: 'restaurant-outline' },
-  { label: 'Fast food', value: 'fast-food-outline' },
-  { label: 'Cafe', value: 'cafe-outline' },
-  { label: 'Mercado', value: 'basket-outline' },
-  { label: 'Compras', value: 'cart-outline' },
-  { label: 'Roupas', value: 'shirt-outline' },
-  { label: 'Presentes', value: 'gift-outline' },
-  { label: 'Transporte', value: 'car-outline' },
-  { label: 'Combustivel', value: 'flame-outline' },
-  { label: 'Onibus', value: 'bus-outline' },
-  { label: 'Bicicleta', value: 'bicycle-outline' },
-  { label: 'Viagem', value: 'airplane-outline' },
-  { label: 'Moradia', value: 'home-outline' },
-  { label: 'Construcao', value: 'construct-outline' },
-  { label: 'Energia', value: 'flash-outline' },
-  { label: 'Agua', value: 'water-outline' },
-  { label: 'Servicos', value: 'wifi-outline' },
-  { label: 'Celular', value: 'phone-portrait-outline' },
-  { label: 'Cartao', value: 'card-outline' },
-  { label: 'Carteira', value: 'wallet-outline' },
-  { label: 'Dinheiro', value: 'cash-outline' },
-  { label: 'Saude', value: 'medical-outline' },
-  { label: 'Fitness', value: 'fitness-outline' },
-  { label: 'Educacao', value: 'school-outline' },
-  { label: 'Livros', value: 'book-outline' },
-  { label: 'Lazer', value: 'game-controller-outline' },
-  { label: 'Cinema', value: 'film-outline' },
-  { label: 'Musica', value: 'musical-notes-outline' },
-  { label: 'Pets', value: 'paw-outline' },
-  { label: 'Trabalho', value: 'business-outline' },
-  { label: 'Manutencao', value: 'hammer-outline' },
-  { label: 'Outros', value: 'ellipsis-horizontal' },
-];
+type RecordedAudio = {
+  audioBase64: string;
+  contentType: string;
+  previewUrl: string;
+};
 
 export function FinancialCycleScreen({ onBack, wallet }: FinancialCycleScreenProps) {
   const queryClient = useQueryClient();
@@ -98,11 +71,29 @@ export function FinancialCycleScreen({ onBack, wallet }: FinancialCycleScreenPro
   const [selectedView, setSelectedView] = useState<CycleView>('expenses');
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const [isExpenseFormOpen, setIsExpenseFormOpen] = useState(false);
-  const [isCategoryFormOpen, setIsCategoryFormOpen] = useState(false);
+  const [isTextExpenseFormOpen, setIsTextExpenseFormOpen] = useState(false);
+  const [isAudioExpenseFormOpen, setIsAudioExpenseFormOpen] = useState(false);
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const [recordedAudio, setRecordedAudio] = useState<RecordedAudio | null>(null);
+  const [audioFeedbackMessage, setAudioFeedbackMessage] = useState<string | null>(null);
   const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(null);
   const [expensePendingDeletion, setExpensePendingDeletion] = useState<ExpenseResponse | null>(
     null
   );
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  const clearRecordedAudio = useCallback(() => {
+    setRecordedAudio((current) => {
+      if (current?.previewUrl && typeof URL !== 'undefined') {
+        URL.revokeObjectURL(current.previewUrl);
+      }
+
+      return null;
+    });
+  }, []);
+
+  useEffect(() => clearRecordedAudio, [clearRecordedAudio]);
 
   const cyclesQuery = useQuery({
     queryKey: queryKeys.expenseCycles(wallet.id),
@@ -145,12 +136,17 @@ export function FinancialCycleScreen({ onBack, wallet }: FinancialCycleScreenPro
       type: 'ONE_TIME',
     },
   });
-  const categoryForm = useForm<ExpenseCategoryFormData>({
-    resolver: zodResolver(expenseCategoryFormSchema),
+  const textExpenseForm = useForm<TextExpenseFormData>({
+    resolver: zodResolver(textExpenseFormSchema),
     defaultValues: {
-      color: '#F97316',
-      icon: 'restaurant-outline',
-      name: '',
+      referenceDate: toDateInputValue(new Date()),
+      text: '',
+    },
+  });
+  const audioExpenseForm = useForm<AudioExpenseFormData>({
+    resolver: zodResolver(audioExpenseFormSchema),
+    defaultValues: {
+      referenceDate: toDateInputValue(new Date()),
     },
   });
 
@@ -199,24 +195,21 @@ export function FinancialCycleScreen({ onBack, wallet }: FinancialCycleScreenPro
     }
   };
 
-  const categoryMutation = useMutation({
-    mutationFn: createExpenseCategory,
-    onError: feedback.showError,
-    onSuccess: async (category) => {
-      queryClient.setQueryData<ExpenseCategoryResponse[]>(
-        queryKeys.expenseCategories,
-        (categories) => [...(categories ?? []), category]
-      );
-      await queryClient.invalidateQueries({ queryKey: queryKeys.expenseCategories });
-      categoryForm.reset({
-        color: '#F97316',
-        icon: 'restaurant-outline',
-        name: '',
-      });
-      setIsCategoryFormOpen(false);
-      feedback.showSuccess('Categoria criada com sucesso.');
-    },
-  });
+  const syncCycleAfterExpense = async (expenseDate?: string) => {
+    await invalidateFinancialData();
+    const cycles = await queryClient.fetchQuery({
+      queryKey: queryKeys.expenseCycles(wallet.id),
+      queryFn: () => listExpenseCycles(wallet.id),
+    });
+    const referenceDate = expenseDate ?? toDateInputValue(new Date());
+    const expenseCycle = cycles.find(
+      (cycle) => referenceDate >= cycle.startsAt && referenceDate <= cycle.endsAt
+    );
+
+    if (expenseCycle) {
+      setSelectedCycleId(expenseCycle.id);
+    }
+  };
 
   const expenseMutation = useMutation({
     mutationFn: async (data: ExpenseFormData) => {
@@ -224,7 +217,7 @@ export function FinancialCycleScreen({ onBack, wallet }: FinancialCycleScreenPro
 
       if (data.type === 'INSTALLMENT') {
         await createInstallmentExpense(wallet.id, {
-          categoryId: data.categoryId,
+          category: data.categoryId,
           description: data.description,
           firstExpenseDate: data.date,
           installments: Number(data.installments),
@@ -238,7 +231,7 @@ export function FinancialCycleScreen({ onBack, wallet }: FinancialCycleScreenPro
       if (data.type === 'RECURRING') {
         await createRecurringExpense(wallet.id, {
           amount,
-          categoryId: data.categoryId,
+          category: data.categoryId,
           description: data.description,
           startsAt: data.date,
         });
@@ -247,30 +240,18 @@ export function FinancialCycleScreen({ onBack, wallet }: FinancialCycleScreenPro
 
       await createOneTimeExpense(wallet.id, {
         amount,
-        categoryId: data.categoryId,
+        category: data.categoryId,
         description: data.description,
         expenseDate: data.date,
       });
     },
     onError: feedback.showError,
     onSuccess: async (_, data) => {
-      await invalidateFinancialData();
-      const cycles = await queryClient.fetchQuery({
-        queryKey: queryKeys.expenseCycles(wallet.id),
-        queryFn: () => listExpenseCycles(wallet.id),
-      });
-      const expenseCycle = cycles.find(
-        (cycle) => data.date >= cycle.startsAt && data.date <= cycle.endsAt
-      );
-
-      if (expenseCycle) {
-        setSelectedCycleId(expenseCycle.id);
-      }
-
+      await syncCycleAfterExpense(data.date);
       expenseForm.reset({
         amount: '',
         amountMode: 'TOTAL',
-        categoryId: categoriesQuery.data?.[0]?.id ?? '',
+        categoryId: categoriesQuery.data?.[0]?.key ?? '',
         date: toDateInputValue(new Date()),
         description: '',
         installments: '',
@@ -278,6 +259,48 @@ export function FinancialCycleScreen({ onBack, wallet }: FinancialCycleScreenPro
       });
       setIsExpenseFormOpen(false);
       feedback.showSuccess('Gasto cadastrado com sucesso.');
+    },
+  });
+
+  const textExpenseMutation = useMutation({
+    mutationFn: (data: TextExpenseFormData) =>
+      createExpenseFromText(wallet.id, {
+        referenceDate: data.referenceDate,
+        text: data.text,
+      }),
+    onError: feedback.showError,
+    onSuccess: async (response, data) => {
+      await syncCycleAfterExpense(response.generatedExpenses[0]?.expenseDate ?? data.referenceDate);
+      textExpenseForm.reset({ referenceDate: toDateInputValue(new Date()), text: '' });
+      setIsTextExpenseFormOpen(false);
+      feedback.showSuccess(
+        expenseCreationSummary(response.type, response.generatedExpenses.length)
+      );
+    },
+  });
+
+  const audioExpenseMutation = useMutation({
+    mutationFn: (data: AudioExpenseFormData) => {
+      if (!recordedAudio) {
+        throw new Error('Grave um audio antes de enviar.');
+      }
+
+      return createExpenseFromAudio(wallet.id, {
+        audioBase64: recordedAudio.audioBase64,
+        contentType: recordedAudio.contentType,
+        referenceDate: data.referenceDate,
+      });
+    },
+    onError: feedback.showError,
+    onSuccess: async (response, data) => {
+      await syncCycleAfterExpense(response.generatedExpenses[0]?.expenseDate ?? data.referenceDate);
+      audioExpenseForm.reset({ referenceDate: toDateInputValue(new Date()) });
+      clearRecordedAudio();
+      setAudioFeedbackMessage(`Transcricao: ${response.transcribedText}`);
+      setIsAudioExpenseFormOpen(false);
+      feedback.showSuccess(
+        expenseCreationSummary(response.classification.type, response.generatedExpenses.length)
+      );
     },
   });
 
@@ -296,15 +319,14 @@ export function FinancialCycleScreen({ onBack, wallet }: FinancialCycleScreenPro
     setIsActionMenuOpen(false);
 
     if (!categoriesQuery.data?.length) {
-      setIsCategoryFormOpen(true);
-      feedback.showError(new Error('Cadastre uma categoria antes de adicionar um gasto.'));
+      feedback.showError(new Error('Nao foi possivel carregar as categorias de gasto.'));
       return;
     }
 
     expenseForm.reset({
       amount: '',
       amountMode: 'TOTAL',
-      categoryId: categoriesQuery.data[0].id,
+      categoryId: categoriesQuery.data[0].key,
       date: toDateInputValue(new Date()),
       description: '',
       installments: '',
@@ -313,14 +335,66 @@ export function FinancialCycleScreen({ onBack, wallet }: FinancialCycleScreenPro
     setIsExpenseFormOpen(true);
   };
 
-  const openCategoryForm = () => {
+  const openTextExpenseForm = () => {
     setIsActionMenuOpen(false);
-    categoryForm.reset({
-      color: '#F97316',
-      icon: 'restaurant-outline',
-      name: '',
+    textExpenseForm.reset({
+      referenceDate: toDateInputValue(new Date()),
+      text: '',
     });
-    setIsCategoryFormOpen(true);
+    setIsTextExpenseFormOpen(true);
+  };
+
+  const openAudioExpenseForm = () => {
+    setIsActionMenuOpen(false);
+    audioExpenseForm.reset({ referenceDate: toDateInputValue(new Date()) });
+    clearRecordedAudio();
+    setAudioFeedbackMessage(null);
+    setIsAudioExpenseFormOpen(true);
+  };
+
+  const startAudioRecording = async () => {
+    if (Platform.OS !== 'web' || !navigator.mediaDevices?.getUserMedia) {
+      setAudioFeedbackMessage('Gravacao de audio disponivel apenas no navegador.');
+      return;
+    }
+
+    try {
+      setAudioFeedbackMessage(null);
+      clearRecordedAudio();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const contentType = preferredAudioContentType();
+      const recorder = new MediaRecorder(stream, contentType ? { mimeType: contentType } : {});
+      audioChunksRef.current = [];
+      mediaRecorderRef.current = recorder;
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop());
+        const blob = new Blob(audioChunksRef.current, {
+          type: recorder.mimeType || contentType || 'audio/webm',
+        });
+        setRecordedAudio({
+          audioBase64: await blobToBase64(blob),
+          contentType: blob.type || 'audio/webm',
+          previewUrl: URL.createObjectURL(blob),
+        });
+        setAudioFeedbackMessage('Audio pronto para envio.');
+      };
+      recorder.start();
+      setIsRecordingAudio(true);
+    } catch (error) {
+      setAudioFeedbackMessage(error instanceof Error ? error.message : 'Nao foi possivel gravar.');
+      setIsRecordingAudio(false);
+    }
+  };
+
+  const stopAudioRecording = () => {
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
+    setIsRecordingAudio(false);
   };
 
   const selectRelativeCycle = (offset: number) => {
@@ -342,7 +416,8 @@ export function FinancialCycleScreen({ onBack, wallet }: FinancialCycleScreenPro
           <View className="flex-1">
             <Text className="text-3xl font-semibold text-foreground">{wallet.description}</Text>
             <Text className="text-sm text-muted-foreground">
-              Meta de {formatCurrencyBr(wallet.spendingGoal)} por ciclo
+              Meta de {formatCurrencyBr(wallet.spendingGoal)} por ciclo · alvo dia{' '}
+              {wallet.targetSpendingDay}
             </Text>
           </View>
         </View>
@@ -401,8 +476,9 @@ export function FinancialCycleScreen({ onBack, wallet }: FinancialCycleScreenPro
 
       <FloatingFinancialActions
         isOpen={isActionMenuOpen}
-        onCategory={openCategoryForm}
+        onAudioExpense={openAudioExpenseForm}
         onExpense={openExpenseForm}
+        onTextExpense={openTextExpenseForm}
         onToggle={() => setIsActionMenuOpen((current) => !current)}
       />
 
@@ -414,12 +490,31 @@ export function FinancialCycleScreen({ onBack, wallet }: FinancialCycleScreenPro
         onClose={() => setIsExpenseFormOpen(false)}
         onSubmit={(data) => expenseMutation.mutate(data)}
       />
-      <CategoryFormDrawer
-        form={categoryForm}
-        isOpen={isCategoryFormOpen}
-        isPending={categoryMutation.isPending}
-        onClose={() => setIsCategoryFormOpen(false)}
-        onSubmit={(data) => categoryMutation.mutate(data)}
+      <TextExpenseFormDrawer
+        form={textExpenseForm}
+        isOpen={isTextExpenseFormOpen}
+        isPending={textExpenseMutation.isPending}
+        onClose={() => setIsTextExpenseFormOpen(false)}
+        onSubmit={(data) => textExpenseMutation.mutate(data)}
+      />
+      <AudioExpenseFormDrawer
+        audioFeedbackMessage={audioFeedbackMessage}
+        audioPreviewUrl={recordedAudio?.previewUrl ?? null}
+        form={audioExpenseForm}
+        hasRecordedAudio={Boolean(recordedAudio)}
+        isOpen={isAudioExpenseFormOpen}
+        isPending={audioExpenseMutation.isPending}
+        isRecording={isRecordingAudio}
+        onClose={() => {
+          if (isRecordingAudio) {
+            stopAudioRecording();
+          }
+          clearRecordedAudio();
+          setIsAudioExpenseFormOpen(false);
+        }}
+        onStartRecording={startAudioRecording}
+        onStopRecording={stopAudioRecording}
+        onSubmit={(data) => audioExpenseMutation.mutate(data)}
       />
       <DeleteConfirmationDrawer
         description="O gasto sera removido do ciclo e das metricas financeiras. Esta acao nao pode ser desfeita."
@@ -472,9 +567,14 @@ function CycleSelector({
             {cycle ? formatReferenceMonth(cycle.referenceMonth, cycle.referenceYear) : 'Sem ciclo'}
           </Text>
           {cycle ? (
-            <Text className="text-xs text-muted-foreground">
-              {formatDateBr(cycle.startsAt)} a {formatDateBr(cycle.endsAt)}
-            </Text>
+            <View className="items-center">
+              <Text className="text-xs text-muted-foreground">
+                {formatDateBr(cycle.startsAt)} a {formatDateBr(cycle.endsAt)}
+              </Text>
+              <Text className="text-xs text-muted-foreground">
+                Alvo de gasto: {formatDateBr(cycle.targetSpendingDate)}
+              </Text>
+            </View>
           ) : (
             <Text className="text-center text-xs text-muted-foreground">
               Cadastre um gasto para criar o primeiro ciclo.
@@ -585,7 +685,22 @@ function CycleMetrics({
       <View className="flex-row gap-2">
         <MetricCard
           label="Disponivel por dia"
-          value={formatCurrencyBr(metrics.remainingDailyAmount)}
+          value={
+            metrics.remainingDailyAmount === null
+              ? 'Encerrado'
+              : formatCurrencyBr(metrics.remainingDailyAmount)
+          }
+        />
+        <MetricCard label="Ate o alvo" value={formatCurrencyBr(metrics.spentUntilTargetDate)} />
+      </View>
+      <View className="flex-row gap-2">
+        <MetricCard
+          label="Apos o alvo"
+          value={
+            metrics.spentAfterTargetDate === null
+              ? 'Encerrado'
+              : formatCurrencyBr(metrics.spentAfterTargetDate)
+          }
         />
         <MetricCard label="Gastos pontuais" value={formatCurrencyBr(metrics.oneTimeTotal)} />
       </View>
@@ -615,7 +730,7 @@ function SpendingByCategoryCard({ metrics }: { metrics: ExpenseCycleMetricsRespo
       {metrics.spendingByCategory.length ? (
         <View className="gap-3">
           {metrics.spendingByCategory.map((item) => (
-            <View className="gap-2" key={item.category.id}>
+            <View className="gap-2" key={item.category.key}>
               <View className="flex-row items-center gap-3">
                 <View
                   className="h-10 w-10 items-center justify-center rounded-full"
@@ -770,13 +885,15 @@ function ExpenseCard({
 
 function FloatingFinancialActions({
   isOpen,
-  onCategory,
+  onAudioExpense,
   onExpense,
+  onTextExpense,
   onToggle,
 }: {
   isOpen: boolean;
-  onCategory: () => void;
+  onAudioExpense: () => void;
   onExpense: () => void;
+  onTextExpense: () => void;
   onToggle: () => void;
 }) {
   const palette = useThemePalette();
@@ -788,9 +905,16 @@ function FloatingFinancialActions({
           <Pressable
             accessibilityRole="button"
             className="flex-row items-center gap-2 rounded-full border border-border bg-card px-4 py-3"
-            onPress={onCategory}>
-            <Ionicons color={palette.primary} name="pricetag-outline" size={20} />
-            <Text className="font-semibold text-foreground">Nova categoria</Text>
+            onPress={onAudioExpense}>
+            <Ionicons color={palette.primary} name="mic-outline" size={20} />
+            <Text className="font-semibold text-foreground">Gasto por audio</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            className="flex-row items-center gap-2 rounded-full border border-border bg-card px-4 py-3"
+            onPress={onTextExpense}>
+            <Ionicons color={palette.primary} name="chatbox-ellipses-outline" size={20} />
+            <Text className="font-semibold text-foreground">Gasto por texto</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -847,7 +971,7 @@ function ExpenseFormDrawer({
             name="categoryId"
             options={categories.map((category) => ({
               label: category.name,
-              value: category.id,
+              value: category.key,
             }))}
           />
           <ControlledInput label="Descricao" name="description" placeholder="Ex: Mercado" />
@@ -963,52 +1087,37 @@ function AmountModeControl({ form }: { form: ReturnType<typeof useForm<ExpenseFo
   );
 }
 
-function CategoryFormDrawer({
+function TextExpenseFormDrawer({
   form,
   isOpen,
   isPending,
   onClose,
   onSubmit,
 }: {
-  form: ReturnType<typeof useForm<ExpenseCategoryFormData>>;
+  form: ReturnType<typeof useForm<TextExpenseFormData>>;
   isOpen: boolean;
   isPending: boolean;
   onClose: () => void;
-  onSubmit: (data: ExpenseCategoryFormData) => void;
+  onSubmit: (data: TextExpenseFormData) => void;
 }) {
-  const palette = useThemePalette();
-
   return (
     <BottomDrawer maxHeight="90%" onClose={onClose} visible={isOpen}>
-      <Text className="text-xl font-semibold text-foreground">Nova categoria</Text>
+      <Text className="text-xl font-semibold text-foreground">Gasto por texto</Text>
       <FormProvider {...form}>
-        <ControlledInput label="Nome" name="name" placeholder="Ex: Alimentacao" />
-        <ControlledColorSwatches label="Cor" name="color" />
-        <ControlledSelect
-          label="Icone"
-          name="icon"
-          options={categoryIconOptions}
-          renderOption={(option, { selected }) => (
-            <CategoryIconSelectOption
-              color={selected ? palette.primary : palette.foreground}
-              label={option.label}
-              value={option.value}
-            />
-          )}
-          renderValue={(option) => (
-            <CategoryIconSelectOption
-              color={palette.foreground}
-              label={option.label}
-              value={option.value}
-            />
-          )}
+        <ControlledInput
+          description="Descreva o gasto de forma breve."
+          label="Texto"
+          multiline
+          name="text"
+          placeholder="Descreva o gasto de forma breve"
         />
+        <ControlledDateInput label="Data de referencia" name="referenceDate" />
         <View className="flex-row gap-2 pt-2">
           <Button className="flex-1" variant="secondary" onPress={onClose}>
             Cancelar
           </Button>
           <Button className="flex-1" isLoading={isPending} onPress={form.handleSubmit(onSubmit)}>
-            Salvar
+            Criar
           </Button>
         </View>
       </FormProvider>
@@ -1016,26 +1125,89 @@ function CategoryFormDrawer({
   );
 }
 
-function CategoryIconSelectOption({
-  color,
-  label,
-  value,
+function AudioExpenseFormDrawer({
+  audioFeedbackMessage,
+  audioPreviewUrl,
+  form,
+  hasRecordedAudio,
+  isOpen,
+  isPending,
+  isRecording,
+  onClose,
+  onStartRecording,
+  onStopRecording,
+  onSubmit,
 }: {
-  color: string;
-  label: string;
-  value: string;
+  audioFeedbackMessage: string | null;
+  audioPreviewUrl: string | null;
+  form: ReturnType<typeof useForm<AudioExpenseFormData>>;
+  hasRecordedAudio: boolean;
+  isOpen: boolean;
+  isPending: boolean;
+  isRecording: boolean;
+  onClose: () => void;
+  onStartRecording: () => void;
+  onStopRecording: () => void;
+  onSubmit: (data: AudioExpenseFormData) => void;
 }) {
   return (
-    <View className="flex-row items-center gap-3">
-      <View className="h-9 w-9 items-center justify-center rounded-full bg-secondary">
-        <Ionicons color={color} name={getCategoryIcon(value)} size={20} />
-      </View>
-      <Text className="text-base font-semibold text-foreground">{label}</Text>
-    </View>
+    <BottomDrawer maxHeight="90%" onClose={onClose} visible={isOpen}>
+      <Text className="text-xl font-semibold text-foreground">Gasto por audio</Text>
+      <FormProvider {...form}>
+        <ControlledDateInput label="Data de referencia" name="referenceDate" />
+        <View className="gap-3 rounded-2xl border border-border bg-muted p-4">
+          <Text className="text-sm text-muted-foreground">Descreva o gasto de forma breve.</Text>
+          <Button
+            variant={isRecording ? 'destructive' : 'secondary'}
+            onPress={isRecording ? onStopRecording : onStartRecording}>
+            {isRecording ? 'Parar gravacao' : hasRecordedAudio ? 'Gravar novamente' : 'Gravar'}
+          </Button>
+          {audioPreviewUrl && Platform.OS === 'web' ? (
+            <audio controls src={audioPreviewUrl} style={{ width: '100%' }}>
+              <track kind="captions" />
+            </audio>
+          ) : null}
+          {audioFeedbackMessage ? (
+            <Text className="text-sm text-muted-foreground" selectable>
+              {audioFeedbackMessage}
+            </Text>
+          ) : null}
+        </View>
+        <View className="flex-row gap-2 pt-2">
+          <Button className="flex-1" variant="secondary" onPress={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            className="flex-1"
+            disabled={!hasRecordedAudio || isRecording}
+            isLoading={isPending}
+            onPress={form.handleSubmit(onSubmit)}>
+            Criar
+          </Button>
+        </View>
+      </FormProvider>
+    </BottomDrawer>
   );
 }
 
 function getCategoryIcon(icon: string): keyof typeof Ionicons.glyphMap {
+  const apiIconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
+    bus: 'bus-outline',
+    car: 'car-outline',
+    home: 'home-outline',
+    paw: 'paw-outline',
+    school: 'school-outline',
+    shopping: 'cart-outline',
+    transport: 'car-outline',
+    utensils: 'restaurant-outline',
+    wallet: 'wallet-outline',
+    wrench: 'construct-outline',
+  };
+
+  if (icon in apiIconMap) {
+    return apiIconMap[icon];
+  }
+
   return icon in Ionicons.glyphMap ? (icon as keyof typeof Ionicons.glyphMap) : 'pricetag-outline';
 }
 
@@ -1048,4 +1220,36 @@ function formatPercentage(value: number) {
     maximumFractionDigits: 1,
     minimumFractionDigits: 0,
   }).format(value)}%`;
+}
+
+function expenseCreationSummary(type: ExpenseType, generatedCount: number) {
+  const typeLabel: Record<ExpenseType, string> = {
+    INSTALLMENT: 'Gasto parcelado criado com sucesso.',
+    ONE_TIME: 'Gasto criado com sucesso.',
+    RECURRING: 'Gasto recorrente criado com sucesso.',
+  };
+
+  return generatedCount > 1
+    ? `${typeLabel[type]} ${generatedCount} ocorrencias geradas.`
+    : typeLabel[type];
+}
+
+function preferredAudioContentType() {
+  if (typeof MediaRecorder === 'undefined') {
+    return '';
+  }
+
+  const supportedTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg', 'audio/mp4'];
+  return supportedTypes.find((type) => MediaRecorder.isTypeSupported(type)) ?? '';
+}
+
+async function blobToBase64(blob: Blob) {
+  const buffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+
+  return btoa(binary);
 }

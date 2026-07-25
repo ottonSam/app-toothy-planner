@@ -14,6 +14,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useThemePalette } from '@/hooks/use-theme-palette';
+import { useThemeVariables } from '@/hooks/use-theme-variables';
+
 type BottomDrawerProps = {
   children: React.ReactNode;
   contentClassName?: string;
@@ -32,6 +35,8 @@ export function BottomDrawer({
   visible,
 }: BottomDrawerProps) {
   const insets = useSafeAreaInsets();
+  const palette = useThemePalette();
+  const themeVariables = useThemeVariables();
   const { height } = useWindowDimensions();
   const [isPresented, setIsPresented] = useState(visible);
   const animationProgress = useRef(new Animated.Value(visible ? 0 : 1)).current;
@@ -107,10 +112,14 @@ export function BottomDrawer({
   });
   const resolvedMaxHeight =
     typeof maxHeight === 'number' ? maxHeight : (height * Number.parseFloat(maxHeight)) / 100;
+  const colorFromRgb = (rgb: string) => `rgb(${rgb.split(' ').join(', ')})`;
 
   return (
     <Modal animationType="none" onRequestClose={onClose} transparent visible={isPresented}>
-      <View className="flex-1 justify-end" pointerEvents={visible ? 'box-none' : 'none'}>
+      <View
+        className="flex-1 justify-end"
+        pointerEvents={visible ? 'box-none' : 'none'}
+        style={themeVariables}>
         <Animated.View
           pointerEvents="box-none"
           style={[
@@ -141,10 +150,15 @@ export function BottomDrawer({
                 contentClassName,
               ].join(' ')}
               style={{
+                backgroundColor: colorFromRgb(palette.cardRgb),
+                borderColor: colorFromRgb(palette.borderRgb),
                 maxHeight: resolvedMaxHeight,
                 paddingBottom: Math.max(insets.bottom, 16),
               }}>
-              <View className="h-1 w-12 self-center rounded-full bg-border" />
+              <View
+                className="h-1 w-12 self-center rounded-full bg-border"
+                style={{ backgroundColor: colorFromRgb(palette.borderRgb) }}
+              />
               {children}
             </View>
           </Animated.View>

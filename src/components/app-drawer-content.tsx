@@ -62,15 +62,6 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
           <View>
             <DrawerItem
               {...drawerItemStyle}
-              focused={currentRoute === 'Diet'}
-              icon={({ color, size }) => (
-                <Ionicons color={color} name="nutrition-outline" size={size} />
-              )}
-              label="Dieta"
-              onPress={() => props.navigation.navigate('Diet')}
-            />
-            <DrawerItem
-              {...drawerItemStyle}
               focused={currentRoute === 'Financial'}
               icon={({ color, size }) => (
                 <Ionicons color={color} name="wallet-outline" size={size} />

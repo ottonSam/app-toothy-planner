@@ -8,7 +8,8 @@ services:
     env_file:
       - .env
     environment:
-      EXPO_PUBLIC_API_BASE_URL: ${EXPO_PUBLIC_API_BASE_URL}
-      API_PROXY_ORIGIN: ${API_PROXY_ORIGIN:-http://host.docker.internal:8080}
+      BASE_URL: ${BASE_URL}
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     ports:
       - '${WEB_PORT:-8014}:80'

@@ -129,49 +129,6 @@ export const profileImageFormSchema = z.object({
     .regex(/^data:image\/(png|jpeg|jpg|webp);base64,/, 'Selecione uma imagem valida.'),
 });
 
-const nonNegativeDecimalString = (label: string) =>
-  z
-    .string()
-    .trim()
-    .min(1, `Informe ${label}.`)
-    .refine(
-      (value) => Number.isFinite(Number(value.replace(',', '.'))),
-      'Informe um numero valido.'
-    )
-    .refine(
-      (value) => Number(value.replace(',', '.')) >= 0,
-      `${label} deve ser maior ou igual a zero.`
-    );
-
-export const dietGoalFormSchema = z.object({
-  kcal: nonNegativeDecimalString('as calorias'),
-  protein: nonNegativeDecimalString('a proteina'),
-  carbohydrate: nonNegativeDecimalString('o carboidrato'),
-  fat: nonNegativeDecimalString('a gordura'),
-  scope: z.enum(['DAILY', 'DEFAULT'], {
-    error: 'Selecione onde aplicar a meta.',
-  }),
-});
-
-export const dietEntryFormSchema = z.object({
-  foodName: z.string().trim().min(1, 'Informe ou selecione um alimento.'),
-  quantity: z
-    .string()
-    .trim()
-    .min(1, 'Informe a quantidade.')
-    .refine(
-      (value) => Number.isFinite(Number(value.replace(',', '.'))),
-      'Informe um numero valido.'
-    )
-    .refine(
-      (value) => Number(value.replace(',', '.')) > 0,
-      'A quantidade deve ser maior que zero.'
-    ),
-  unit: z.enum(['GRAMS', 'PORTIONS'], {
-    error: 'Selecione a unidade.',
-  }),
-});
-
 const positiveDecimalString = (label: string) =>
   z
     .string()
@@ -186,18 +143,15 @@ const positiveDecimalString = (label: string) =>
 export const expenseWalletFormSchema = z.object({
   description: z.string().trim().min(2, 'Informe uma descricao com pelo menos 2 caracteres.'),
   spendingGoal: positiveDecimalString('a meta de gastos'),
-  cycleEndDay: z
+  startsAt: z
     .string()
-    .trim()
-    .min(1, 'Informe o dia de encerramento.')
+    .min(1, 'Informe a data inicial.')
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use o formato AAAA-MM-DD.'),
+  targetSpendingDay: z
+    .string()
+    .min(1, 'Informe o dia alvo.')
     .refine((value) => Number.isInteger(Number(value)), 'Informe um dia inteiro.')
     .refine((value) => Number(value) >= 1 && Number(value) <= 31, 'O dia deve estar entre 1 e 31.'),
-});
-
-export const expenseCategoryFormSchema = z.object({
-  name: z.string().trim().min(2, 'Informe um nome com pelo menos 2 caracteres.'),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Selecione uma cor valida.'),
-  icon: z.string().min(1, 'Selecione um icone.'),
 });
 
 export const expenseFormSchema = z
@@ -205,7 +159,7 @@ export const expenseFormSchema = z
     type: z.enum(['ONE_TIME', 'INSTALLMENT', 'RECURRING'], {
       error: 'Selecione o tipo do gasto.',
     }),
-    categoryId: z.string().uuid('Selecione uma categoria.'),
+    categoryId: z.string().min(1, 'Selecione uma categoria.'),
     description: z.string().trim().min(2, 'Informe uma descricao com pelo menos 2 caracteres.'),
     amount: positiveDecimalString('o valor'),
     amountMode: z.enum(['TOTAL', 'INSTALLMENT']),
@@ -229,6 +183,21 @@ export const expenseFormSchema = z
     }
   });
 
+export const textExpenseFormSchema = z.object({
+  referenceDate: z
+    .string()
+    .min(1, 'Informe a data de referencia.')
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use o formato AAAA-MM-DD.'),
+  text: z.string().trim().min(8, 'Descreva o gasto com pelo menos 8 caracteres.'),
+});
+
+export const audioExpenseFormSchema = z.object({
+  referenceDate: z
+    .string()
+    .min(1, 'Informe a data de referencia.')
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use o formato AAAA-MM-DD.'),
+});
+
 export type LoginFormData = z.infer<typeof loginFormSchema>;
 export type RegisterFormData = z.infer<typeof registerFormSchema>;
 export type ActivationCodeFormData = z.infer<typeof activationCodeFormSchema>;
@@ -242,8 +211,7 @@ export type WeeklyReportFormData = z.infer<typeof weeklyReportFormSchema>;
 export type ProfileFormData = z.infer<typeof profileFormSchema>;
 export type PasswordUpdateFormData = z.infer<typeof passwordUpdateFormSchema>;
 export type ProfileImageFormData = z.infer<typeof profileImageFormSchema>;
-export type DietGoalFormData = z.infer<typeof dietGoalFormSchema>;
-export type DietEntryFormData = z.infer<typeof dietEntryFormSchema>;
 export type ExpenseWalletFormData = z.infer<typeof expenseWalletFormSchema>;
-export type ExpenseCategoryFormData = z.infer<typeof expenseCategoryFormSchema>;
 export type ExpenseFormData = z.infer<typeof expenseFormSchema>;
+export type AudioExpenseFormData = z.infer<typeof audioExpenseFormSchema>;
+export type TextExpenseFormData = z.infer<typeof textExpenseFormSchema>;

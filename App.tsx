@@ -16,7 +16,6 @@ import { registerServiceWorker } from '@/lib/register-service-worker';
 import { getThemePalette, getThemeVariables } from '@/lib/theme';
 import type { RootDrawerParamList } from '@/navigation/types';
 import { CalendarsScreen } from '@/screens/calendars-screen';
-import { DietScreen } from '@/screens/diet-screen';
 import { FinancialScreen } from '@/screens/financial-screen';
 import { LoginScreen } from '@/screens/login-screen';
 import { ObjectivesScreen } from '@/screens/objectives-screen';
@@ -79,13 +78,6 @@ function AppContent() {
             name="VerifyEmail"
             options={{ title: 'Verificar email' }}
           />
-          <Drawer.Screen name="Diet" options={{ title: 'Dieta' }}>
-            {(props) => (
-              <ProtectedScreen>
-                <DietScreen {...props} />
-              </ProtectedScreen>
-            )}
-          </Drawer.Screen>
           <Drawer.Screen name="Financial" options={{ title: 'Gastos' }}>
             {(props) => (
               <ProtectedScreen>

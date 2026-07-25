@@ -23,13 +23,27 @@ jobs:
     steps:
       - name: Conectar via SSH e atualizar aplicação
         uses: appleboy/ssh-action@v1
+        env:
+          BASE_URL: ${{ secrets.BASE_URL || vars.BASE_URL }}
+          WEB_PORT: ${{ vars.WEB_PORT || '8014' }}
+          WEB_CONTAINER_NAME: ${{ vars.WEB_CONTAINER_NAME || 'toothy-planner-web' }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
+          envs: BASE_URL,WEB_PORT,WEB_CONTAINER_NAME
           script: |
             set -e
             cd ~/toothy-planner/app-toothy-planner
             git pull --ff-only origin main
+            if [ -z "${BASE_URL:-}" ]; then
+              echo "BASE_URL precisa ser configurada em secrets ou vars do GitHub."
+              exit 1
+            fi
+            {
+              printf 'BASE_URL=%s\n' "${BASE_URL}"
+              printf 'WEB_PORT=%s\n' "${WEB_PORT}"
+              printf 'WEB_CONTAINER_NAME=%s\n' "${WEB_CONTAINER_NAME}"
+            } > .env
             docker compose up --build -d --remove-orphans
