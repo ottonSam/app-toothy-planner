@@ -294,19 +294,25 @@ function FlashcardDeckCard({
         />
       </View>
 
-      <Text className="text-sm text-muted-foreground" numberOfLines={2}>
-        {deck.context}
-      </Text>
-
-      <View className="flex-row items-center">
-        <Text className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-foreground">
-          {deck.targetLanguage} → {deck.baseLanguage}
-        </Text>
+      <View className="flex-row items-center gap-3">
+        <View className="flex-1 gap-3">
+          <Text className="text-sm text-muted-foreground" numberOfLines={2}>
+            {deck.context}
+          </Text>
+          <View className="flex-row items-center">
+            <Text className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-foreground">
+              {deck.targetLanguage} → {deck.baseLanguage}
+            </Text>
+          </View>
+        </View>
+        <Pressable
+          accessibilityLabel={`Iniciar revisao do deck ${deck.name}`}
+          accessibilityRole="button"
+          className="h-12 w-12 items-center justify-center rounded-full bg-primary"
+          onPress={onReview}>
+          <Ionicons color={palette.background} name="chevron-forward" size={24} />
+        </Pressable>
       </View>
-
-      <Button className="w-full" onPress={onReview}>
-        Iniciar revisao
-      </Button>
     </View>
   );
 }
