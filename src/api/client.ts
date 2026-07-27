@@ -1,6 +1,12 @@
 import { z } from 'zod';
 
-export const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL ?? 'http://localhost:8080/api/v1';
+const configuredRuntimeBaseUrl =
+  typeof window === 'undefined' ? undefined : window.__TOOTHY_PLANNER_CONFIG__?.apiBaseUrl;
+const runtimeBaseUrl =
+  configuredRuntimeBaseUrl === '__BASE_URL__' ? undefined : configuredRuntimeBaseUrl;
+
+export const BASE_URL =
+  runtimeBaseUrl ?? process.env.EXPO_PUBLIC_BASE_URL ?? 'http://localhost:8080/api/v1';
 
 type RequestOptions<TBody> = {
   body?: TBody;

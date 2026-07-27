@@ -47,3 +47,5 @@ jobs:
               printf 'WEB_CONTAINER_NAME=%s\n' "${WEB_CONTAINER_NAME}"
             } > .env
             docker compose up --build -d --remove-orphans
+            docker compose exec -T web grep -F -q "${BASE_URL}" /usr/share/nginx/html/runtime-config.js
+            docker compose exec -T web cat /usr/share/nginx/html/runtime-config.js

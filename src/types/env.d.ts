@@ -7,3 +7,9 @@ declare namespace NodeJS {
 declare const process: {
   env: NodeJS.ProcessEnv;
 };
+
+interface Window {
+  __TOOTHY_PLANNER_CONFIG__?: {
+    apiBaseUrl?: string;
+  };
+}

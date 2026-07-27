@@ -41,9 +41,12 @@ jobs:
         run: |
           test -f dist/manifest.json
           test -f dist/sw.js
+          test -f dist/runtime-config.js
           test -f dist/icons/icon-192.png
           test -f dist/icons/icon-512.png
           grep -q 'rel="manifest"' dist/index.html
+          grep -q 'runtime-config.js' dist/index.html
+          grep -q '__BASE_URL__' dist/runtime-config.js
           if grep -qE 'precacheAndRoute|caches\.open|cache\.put' dist/sw.js; then
             echo "O service worker não deve manter cache offline."
             exit 1

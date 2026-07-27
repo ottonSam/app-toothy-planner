@@ -1,3 +1,5 @@
+self.__TOOTHY_PLANNER_SW_VERSION__ = '2026-07-27-runtime-config';
+
 self.addEventListener('install', () => {
   self.skipWaiting();
 });
