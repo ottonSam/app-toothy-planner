@@ -26,6 +26,13 @@ const apiErrorMessagesPt: Record<string, string> = {
   'Installment expense not found': 'Parcelamento nao encontrado.',
   'Invalid request body': 'Os dados enviados sao invalidos.',
   'Invalid request parameter': 'Um dos parametros informados e invalido.',
+  'Flashcard deck not found': 'Deck de flash cards nao encontrado.',
+  'Flashcard generation card count exceeds maximum size':
+    'A quantidade de cartas excede o limite permitido.',
+  'Flashcard generation card count must be greater than zero':
+    'A quantidade de cartas deve ser maior que zero.',
+  'Flashcard generation job not found': 'Geracao de flash cards nao encontrada.',
+  'No flashcards available for review': 'Nenhuma carta esta disponivel para revisao.',
   'Recurring expense is canceled': 'A recorrencia ja foi cancelada.',
   'Recurring expense not found': 'Recorrencia nao encontrada.',
   'Wallet description already exists': 'Ja existe uma carteira com essa descricao.',
@@ -47,6 +54,10 @@ export class ApiError extends Error {
 let refreshSessionPromise: Promise<void> | null = null;
 
 export function getApiErrorMessage(error: unknown) {
+  if (error instanceof z.ZodError) {
+    return 'A resposta do servidor esta em um formato inesperado. Atualize os servicos e tente novamente.';
+  }
+
   if (error instanceof ApiError || error instanceof Error) {
     return apiErrorMessagesPt[error.message] ?? error.message;
   }

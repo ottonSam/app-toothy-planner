@@ -7,6 +7,18 @@ export type ActivityType = 'DAYS' | 'COUNT' | 'TIME';
 export type ExpenseType = 'ONE_TIME' | 'INSTALLMENT' | 'RECURRING';
 export type ExpenseSource = 'MANUAL' | 'AI_TEXT' | 'AI_AUDIO';
 
+export type FlashcardDeckType = 'VOCABULARY' | 'IRREGULAR_VERBS' | 'EXPRESSIONS';
+
+export type FlashcardGenerationStatus =
+  | 'PENDING'
+  | 'RUNNING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELED'
+  | 'PARTIAL_COMPLETED';
+
+export type FlashcardReviewRating = 'AGAIN' | 'HARD' | 'GOOD' | 'EASY';
+
 export type WeekDay =
   | 'SUNDAY'
   | 'MONDAY'
@@ -206,4 +218,118 @@ export type ExpenseAudioResponse = Omit<ExpenseTextResponse, 'type'> & {
   classification: {
     type: ExpenseType;
   };
+};
+
+export type FlashcardDeckResponse = {
+  id: string;
+  name: string;
+  context: string;
+  targetLanguage: string;
+  baseLanguage: string;
+  type: FlashcardDeckType;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FlashcardExampleResponse = {
+  text: string;
+  translation: string;
+};
+
+export type FlashcardTagResponse = {
+  id: string;
+  name: string;
+};
+
+export type FlashcardCardResponse = {
+  id: string;
+  deckId: string;
+  type: FlashcardDeckType;
+  word: string | null;
+  baseVerb: string | null;
+  pastSimple: string | null;
+  pastParticiple: string | null;
+  expression: string | null;
+  translation: string;
+  phonetic: string | null;
+  level: string | null;
+  usageNote: string | null;
+  active: boolean;
+  lastSeenAt: string | null;
+  lastReviewedAt: string | null;
+  nextReviewAt: string | null;
+  reviewCount: number;
+  correctCount: number;
+  wrongCount: number;
+  consecutiveCorrect: number;
+  consecutiveWrong: number;
+  difficulty: number;
+  examples: FlashcardExampleResponse[];
+  tags: FlashcardTagResponse[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FlashcardCardPageResponse = {
+  content: FlashcardCardResponse[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+};
+
+export type FlashcardGenerationBatchResponse = {
+  id: string;
+  batchNumber: number;
+  requestedCount: number;
+  createdCount: number;
+  status: FlashcardGenerationStatus;
+  errorMessage: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  updatedAt: string;
+};
+
+export type FlashcardGenerationJobResponse = {
+  id: string;
+  deckId: string;
+  type: FlashcardDeckType;
+  context: string;
+  targetLanguage: string;
+  baseLanguage: string;
+  requestedCount: number;
+  createdCount: number;
+  status: FlashcardGenerationStatus;
+  errorMessage: string | null;
+  batches: FlashcardGenerationBatchResponse[];
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  updatedAt: string;
+};
+
+export type FlashcardNextCardResponse = {
+  card: FlashcardCardResponse;
+  score: number;
+};
+
+export type FlashcardReviewRatingResponse = {
+  key: FlashcardReviewRating;
+  name: string;
+  description: string;
+};
+
+export type FlashcardMetricsResponse = {
+  totalDecks: number;
+  activeCards: number;
+  reviewedToday: number;
+  reviewedThisWeek: number;
+  totalCorrect: number;
+  totalWrong: number;
+  accuracyRate: number;
+  dueCards: number;
+  neverSeenCards: number;
 };

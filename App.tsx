@@ -17,6 +17,9 @@ import { getThemePalette, getThemeVariables } from '@/lib/theme';
 import type { RootDrawerParamList } from '@/navigation/types';
 import { CalendarsScreen } from '@/screens/calendars-screen';
 import { FinancialScreen } from '@/screens/financial-screen';
+import { FlashcardDeckScreen } from '@/screens/flashcard-deck-screen';
+import { FlashcardReviewScreen } from '@/screens/flashcard-review-screen';
+import { FlashcardsScreen } from '@/screens/flashcards-screen';
 import { FocusScreen } from '@/screens/focus-screen';
 import { LoginScreen } from '@/screens/login-screen';
 import { ObjectivesScreen } from '@/screens/objectives-screen';
@@ -104,6 +107,27 @@ function AppContent() {
             {(props) => (
               <ProtectedScreen>
                 <FocusScreen {...props} />
+              </ProtectedScreen>
+            )}
+          </Drawer.Screen>
+          <Drawer.Screen name="Flashcards" options={{ title: 'Flash cards' }}>
+            {(props) => (
+              <ProtectedScreen>
+                <FlashcardsScreen {...props} />
+              </ProtectedScreen>
+            )}
+          </Drawer.Screen>
+          <Drawer.Screen name="FlashcardDeck" options={{ title: 'Deck de flash cards' }}>
+            {(props) => (
+              <ProtectedScreen>
+                <FlashcardDeckScreen {...props} />
+              </ProtectedScreen>
+            )}
+          </Drawer.Screen>
+          <Drawer.Screen name="FlashcardReview" options={{ title: 'Revisao de flash cards' }}>
+            {(props) => (
+              <ProtectedScreen>
+                <FlashcardReviewScreen {...props} />
               </ProtectedScreen>
             )}
           </Drawer.Screen>

@@ -215,3 +215,130 @@ export const expenseAudioResponseSchema = z.object({
   recurringExpense: recurringExpenseResponseSchema.nullable(),
   generatedExpenses: z.array(expenseResponseSchema),
 });
+
+export const flashcardDeckTypeSchema = z.enum(['VOCABULARY', 'IRREGULAR_VERBS', 'EXPRESSIONS']);
+
+export const flashcardGenerationStatusSchema = z.enum([
+  'PENDING',
+  'RUNNING',
+  'COMPLETED',
+  'FAILED',
+  'CANCELED',
+  'PARTIAL_COMPLETED',
+]);
+
+export const flashcardReviewRatingSchema = z.enum(['AGAIN', 'HARD', 'GOOD', 'EASY']);
+
+export const flashcardDeckResponseSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  context: z.string(),
+  targetLanguage: z.string(),
+  baseLanguage: z.string(),
+  type: flashcardDeckTypeSchema,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const flashcardExampleResponseSchema = z.object({
+  text: z.string(),
+  translation: z.string(),
+});
+
+export const flashcardTagResponseSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+});
+
+export const flashcardCardResponseSchema = z.object({
+  id: z.string().uuid(),
+  deckId: z.string().uuid(),
+  type: flashcardDeckTypeSchema,
+  word: z.string().nullable(),
+  baseVerb: z.string().nullable(),
+  pastSimple: z.string().nullable(),
+  pastParticiple: z.string().nullable(),
+  expression: z.string().nullable(),
+  translation: z.string(),
+  phonetic: z.string().nullable(),
+  level: z.string().nullable(),
+  usageNote: z.string().nullable(),
+  active: z.boolean(),
+  lastSeenAt: z.string().nullable(),
+  lastReviewedAt: z.string().nullable(),
+  nextReviewAt: z.string().nullable(),
+  reviewCount: z.number(),
+  correctCount: z.number(),
+  wrongCount: z.number(),
+  consecutiveCorrect: z.number(),
+  consecutiveWrong: z.number(),
+  difficulty: z.number(),
+  examples: z.array(flashcardExampleResponseSchema),
+  tags: z.array(flashcardTagResponseSchema),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const flashcardCardPageResponseSchema = z.object({
+  content: z.array(flashcardCardResponseSchema),
+  page: z.number(),
+  size: z.number(),
+  totalElements: z.number(),
+  totalPages: z.number(),
+  first: z.boolean(),
+  last: z.boolean(),
+});
+
+export const flashcardGenerationBatchResponseSchema = z.object({
+  id: z.string().uuid(),
+  batchNumber: z.number(),
+  requestedCount: z.number(),
+  createdCount: z.number(),
+  status: flashcardGenerationStatusSchema,
+  errorMessage: z.string().nullable(),
+  createdAt: z.string(),
+  startedAt: z.string().nullable(),
+  finishedAt: z.string().nullable(),
+  updatedAt: z.string(),
+});
+
+export const flashcardGenerationJobResponseSchema = z.object({
+  id: z.string().uuid(),
+  deckId: z.string().uuid(),
+  type: flashcardDeckTypeSchema,
+  context: z.string(),
+  targetLanguage: z.string(),
+  baseLanguage: z.string(),
+  requestedCount: z.number(),
+  createdCount: z.number(),
+  status: flashcardGenerationStatusSchema,
+  errorMessage: z.string().nullable(),
+  batches: z.array(flashcardGenerationBatchResponseSchema),
+  createdAt: z.string(),
+  startedAt: z.string().nullable(),
+  finishedAt: z.string().nullable(),
+  updatedAt: z.string(),
+});
+
+export const flashcardNextCardResponseSchema = z.object({
+  card: flashcardCardResponseSchema,
+  score: z.number(),
+});
+
+export const flashcardReviewRatingResponseSchema = z.object({
+  key: flashcardReviewRatingSchema,
+  name: z.string(),
+  description: z.string(),
+});
+
+export const flashcardMetricsResponseSchema = z.object({
+  totalDecks: z.number(),
+  activeCards: z.number(),
+  reviewedToday: z.number(),
+  reviewedThisWeek: z.number(),
+  totalCorrect: z.number(),
+  totalWrong: z.number(),
+  accuracyRate: z.number(),
+  dueCards: z.number(),
+  neverSeenCards: z.number(),
+});

@@ -96,6 +96,19 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
             />
             <DrawerItem
               {...drawerItemStyle}
+              focused={
+                currentRoute === 'Flashcards' ||
+                currentRoute === 'FlashcardDeck' ||
+                currentRoute === 'FlashcardReview'
+              }
+              icon={({ color, size }) => (
+                <Ionicons color={color} name="albums-outline" size={size} />
+              )}
+              label="Flash cards"
+              onPress={() => props.navigation.navigate('Flashcards')}
+            />
+            <DrawerItem
+              {...drawerItemStyle}
               focused={currentRoute === 'Profile'}
               icon={({ color, size }) => (
                 <Ionicons color={color} name="person-outline" size={size} />

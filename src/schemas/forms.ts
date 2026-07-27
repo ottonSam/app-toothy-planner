@@ -150,6 +150,87 @@ export const focusSessionFormSchema = z.object({
     ),
 });
 
+export const flashcardDeckFormSchema = z.object({
+  name: z.string().trim().min(2, 'Informe um nome com pelo menos 2 caracteres.'),
+  context: z.string().trim().min(3, 'Descreva o contexto com pelo menos 3 caracteres.'),
+  targetLanguage: z.string().trim().min(2, 'Informe o idioma que deseja estudar.'),
+  baseLanguage: z.string().trim().min(2, 'Informe o idioma usado nas traducoes.'),
+  type: z.enum(['VOCABULARY', 'IRREGULAR_VERBS', 'EXPRESSIONS'], {
+    error: 'Selecione o tipo do deck.',
+  }),
+});
+
+export const flashcardDeckGenerationFormSchema = flashcardDeckFormSchema.extend({
+  cardCount: z
+    .string()
+    .trim()
+    .min(1, 'Informe a quantidade de cartas.')
+    .refine((value) => Number.isInteger(Number(value)), 'Informe um numero inteiro.')
+    .refine((value) => Number(value) >= 1, 'Gere pelo menos 1 carta.')
+    .refine((value) => Number(value) <= 1000, 'Gere no maximo 1000 cartas por vez.'),
+});
+
+const flashcardExampleFormSchema = z
+  .object({
+    text: z.string().trim(),
+    translation: z.string().trim(),
+  })
+  .superRefine((example, context) => {
+    if (example.text && !example.translation) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Informe a traducao do exemplo.',
+        path: ['translation'],
+      });
+    }
+
+    if (!example.text && example.translation) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Informe o exemplo no idioma estudado.',
+        path: ['text'],
+      });
+    }
+  });
+
+export const flashcardCardFormSchema = z
+  .object({
+    type: z.enum(['VOCABULARY', 'IRREGULAR_VERBS', 'EXPRESSIONS']),
+    word: z.string().trim(),
+    baseVerb: z.string().trim(),
+    pastSimple: z.string().trim(),
+    pastParticiple: z.string().trim(),
+    expression: z.string().trim(),
+    translation: z.string().trim().min(1, 'Informe a traducao.'),
+    phonetic: z.string().trim(),
+    level: z.string().trim(),
+    usageNote: z.string().trim(),
+    active: z.boolean(),
+    tags: z.string().trim(),
+    examples: z.array(flashcardExampleFormSchema),
+  })
+  .superRefine((card, context) => {
+    const requiredFields = {
+      VOCABULARY: [['word', 'Informe a palavra.']],
+      IRREGULAR_VERBS: [
+        ['baseVerb', 'Informe o verbo base.'],
+        ['pastSimple', 'Informe o passado simples.'],
+        ['pastParticiple', 'Informe o participio passado.'],
+      ],
+      EXPRESSIONS: [['expression', 'Informe a expressao.']],
+    }[card.type] as [keyof typeof card, string][];
+
+    requiredFields.forEach(([field, message]) => {
+      if (!card[field]) {
+        context.addIssue({
+          code: 'custom',
+          message,
+          path: [field],
+        });
+      }
+    });
+  });
+
 const positiveDecimalString = (label: string) =>
   z
     .string()
@@ -233,6 +314,9 @@ export type ProfileFormData = z.infer<typeof profileFormSchema>;
 export type PasswordUpdateFormData = z.infer<typeof passwordUpdateFormSchema>;
 export type ProfileImageFormData = z.infer<typeof profileImageFormSchema>;
 export type FocusSessionFormData = z.infer<typeof focusSessionFormSchema>;
+export type FlashcardDeckFormData = z.infer<typeof flashcardDeckFormSchema>;
+export type FlashcardDeckGenerationFormData = z.infer<typeof flashcardDeckGenerationFormSchema>;
+export type FlashcardCardFormData = z.infer<typeof flashcardCardFormSchema>;
 export type ExpenseWalletFormData = z.infer<typeof expenseWalletFormSchema>;
 export type ExpenseFormData = z.infer<typeof expenseFormSchema>;
 export type AudioExpenseFormData = z.infer<typeof audioExpenseFormSchema>;

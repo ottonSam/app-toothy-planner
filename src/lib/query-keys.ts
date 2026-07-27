@@ -16,4 +16,13 @@ export const queryKeys = {
   calendarReports: (calendarId: string) => ['user', 'calendars', calendarId, 'reports'] as const,
   weekActivities: (calendarId: string, week: number) =>
     ['user', 'calendars', calendarId, 'weeks', week, 'activities'] as const,
+  flashcardDecks: ['user', 'flashcards', 'decks'] as const,
+  flashcardDeck: (deckId: string) => ['user', 'flashcards', 'decks', deckId] as const,
+  flashcardDeckCards: (deckId: string) => ['user', 'flashcards', 'decks', deckId, 'cards'] as const,
+  flashcardDeckCardPage: (deckId: string, page: number) =>
+    ['user', 'flashcards', 'decks', deckId, 'cards', page] as const,
+  flashcardGenerationJob: (jobId: string) =>
+    ['user', 'flashcards', 'generation-jobs', jobId] as const,
+  flashcardReviewRatings: ['user', 'flashcards', 'review-ratings'] as const,
+  flashcardMetrics: ['user', 'flashcards', 'metrics'] as const,
 };
