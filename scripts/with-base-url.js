@@ -27,7 +27,11 @@ const expoBin = join(
 const args = process.argv.slice(2);
 const env = {
   ...process.env,
-  EXPO_PUBLIC_BASE_URL: process.env.BASE_URL ?? readBaseUrlFromEnvFile() ?? fallbackBaseUrl,
+  EXPO_PUBLIC_BASE_URL:
+    process.env.BASE_URL ??
+    process.env.EXPO_PUBLIC_BASE_URL ??
+    readBaseUrlFromEnvFile() ??
+    fallbackBaseUrl,
 };
 
 const result = spawnSync(expoBin, args, {
