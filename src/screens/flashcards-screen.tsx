@@ -78,9 +78,10 @@ export function FlashcardsScreen({ navigation }: FlashcardsScreenProps) {
     onSuccess: async (job) => {
       formOpenState.close();
       form.reset(generationDefaults);
+      queryClient.setQueryData(queryKeys.flashcardDeckGenerationStatus(job.deckId), job);
       await queryClient.invalidateQueries({ queryKey: queryKeys.flashcardDecks });
       await queryClient.invalidateQueries({ queryKey: queryKeys.flashcardMetrics });
-      navigation.navigate('FlashcardDeck', { deckId: job.deckId, jobId: job.id });
+      navigation.navigate('FlashcardDeck', { deckId: job.deckId });
     },
   });
 

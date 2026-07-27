@@ -7,8 +7,27 @@ import type { FlashcardGenerationJobResponse } from '@/types/api';
 
 export function FlashcardGenerationStatusCard({ job }: { job: FlashcardGenerationJobResponse }) {
   const palette = useThemePalette();
+  const requestedCount =
+    job.batches.reduce((total, batch) => total + batch.requestedCount, 0) || job.requestedCount;
+  const createdCount =
+    job.batches.length > 0
+      ? job.batches.reduce((total, batch) => total + batch.createdCount, 0)
+      : job.createdCount;
+  const processedCount = job.batches.reduce(
+    (total, batch) =>
+      total +
+      (isGenerationInProgress(batch.status)
+        ? Math.min(batch.createdCount, batch.requestedCount)
+        : batch.requestedCount),
+    0
+  );
   const progress =
-    job.requestedCount > 0 ? Math.min(100, (job.createdCount / job.requestedCount) * 100) : 0;
+    requestedCount > 0
+      ? Math.min(
+          100,
+          ((job.batches.length > 0 ? processedCount : createdCount) / requestedCount) * 100
+        )
+      : 0;
   const inProgress = isGenerationInProgress(job.status);
   const colorFromRgb = (rgb: string) => `rgb(${rgb.split(' ').join(', ')})`;
   const statusColor =
@@ -35,7 +54,7 @@ export function FlashcardGenerationStatusCard({ job }: { job: FlashcardGeneratio
           </Text>
         </View>
         <Text className="text-sm font-semibold text-foreground">
-          {job.createdCount}/{job.requestedCount}
+          {createdCount}/{requestedCount}
         </Text>
       </View>
 
@@ -45,6 +64,27 @@ export function FlashcardGenerationStatusCard({ job }: { job: FlashcardGeneratio
           style={{ width: `${Math.max(progress, job.status === 'PENDING' ? 2 : 0)}%` }}
         />
       </View>
+
+      {job.batches.length > 0 ? (
+        <View className="gap-2 rounded-xl bg-muted p-3">
+          <Text className="text-xs font-semibold uppercase text-muted-foreground">
+            Progresso dos lotes
+          </Text>
+          {job.batches.map((batch) => (
+            <View className="flex-row items-center gap-2" key={batch.id}>
+              <Text className="flex-1 text-sm font-medium text-foreground">
+                Lote {batch.batchNumber}
+              </Text>
+              <Text className="text-xs text-muted-foreground">
+                {batch.createdCount}/{batch.requestedCount}
+              </Text>
+              <Text className="min-w-20 text-right text-xs font-medium text-foreground">
+                {flashcardGenerationStatusLabels[batch.status]}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
 
       {job.errorMessage ? (
         <Text className="text-sm text-destructive" selectable>

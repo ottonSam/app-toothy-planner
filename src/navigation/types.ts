@@ -7,7 +7,7 @@ export type RootDrawerParamList = {
   Calendars: undefined;
   Focus: undefined;
   Flashcards: undefined;
-  FlashcardDeck: { deckId: string; edit?: boolean; jobId?: string };
+  FlashcardDeck: { deckId: string; edit?: boolean };
   FlashcardReview: { deckId: string; deckName: string };
   Profile: undefined;
 };

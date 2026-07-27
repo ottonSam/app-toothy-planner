@@ -149,10 +149,13 @@ export function deleteFlashcardCard(cardId: string) {
   });
 }
 
-export function getFlashcardGenerationJob(jobId: string) {
-  return apiRequest<FlashcardGenerationJobResponse>(`/flashcards/generation-jobs/${jobId}`, {
-    schema: flashcardGenerationJobResponseSchema,
-  });
+export function getFlashcardDeckGenerationStatus(deckId: string) {
+  return apiRequest<FlashcardGenerationJobResponse>(
+    `/flashcards/decks/${deckId}/generation-status`,
+    {
+      schema: flashcardGenerationJobResponseSchema,
+    }
+  );
 }
 
 export function listFlashcardReviewRatings() {

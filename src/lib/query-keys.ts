@@ -21,8 +21,8 @@ export const queryKeys = {
   flashcardDeckCards: (deckId: string) => ['user', 'flashcards', 'decks', deckId, 'cards'] as const,
   flashcardDeckCardPage: (deckId: string, page: number) =>
     ['user', 'flashcards', 'decks', deckId, 'cards', page] as const,
-  flashcardGenerationJob: (jobId: string) =>
-    ['user', 'flashcards', 'generation-jobs', jobId] as const,
+  flashcardDeckGenerationStatus: (deckId: string) =>
+    ['user', 'flashcards', 'decks', deckId, 'generation-status'] as const,
   flashcardReviewRatings: ['user', 'flashcards', 'review-ratings'] as const,
   flashcardMetrics: ['user', 'flashcards', 'metrics'] as const,
 };

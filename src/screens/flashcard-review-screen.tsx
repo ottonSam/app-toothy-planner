@@ -170,7 +170,7 @@ function ReviewCard({ card, isRevealed }: { card: FlashcardCardResponse; isRevea
         {card.phonetic ? (
           <Text className="text-center text-base text-muted-foreground">{card.phonetic}</Text>
         ) : null}
-        {card.examples.length && !isRevealed ? (
+        {card.type !== 'IRREGULAR_VERBS' && card.examples.length && !isRevealed ? (
           <View className="items-center gap-2 pt-1">
             {card.examples.map((example, index) => (
               <Text

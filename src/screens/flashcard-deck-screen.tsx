@@ -10,7 +10,7 @@ import {
   createFlashcardCard,
   deleteFlashcardCard,
   getFlashcardDeck,
-  getFlashcardGenerationJob,
+  getFlashcardDeckGenerationStatus,
   listFlashcardDeckCards,
   type FlashcardCardRequest,
   updateFlashcardCard,
@@ -71,7 +71,7 @@ const emptyCardValues = (type: FlashcardDeckResponse['type']): FlashcardCardForm
 });
 
 export function FlashcardDeckScreen({ navigation, route }: FlashcardDeckScreenProps) {
-  const { deckId, jobId } = route.params;
+  const { deckId } = route.params;
   const palette = useThemePalette();
   const queryClient = useQueryClient();
   const feedback = useMutationFeedback();
@@ -83,7 +83,7 @@ export function FlashcardDeckScreen({ navigation, route }: FlashcardDeckScreenPr
   );
   const [page, setPage] = useState(0);
   const screenScrollRef = useRef<ScrollView>(null);
-  const handledTerminalJob = useRef(false);
+  const handledTerminalJobId = useRef<string | null>(null);
   const deckQuery = useQuery({
     queryKey: queryKeys.flashcardDeck(deckId),
     queryFn: () => getFlashcardDeck(deckId),
@@ -93,9 +93,8 @@ export function FlashcardDeckScreen({ navigation, route }: FlashcardDeckScreenPr
     queryFn: () => listFlashcardDeckCards(deckId, page),
   });
   const jobQuery = useQuery({
-    enabled: Boolean(jobId),
-    queryKey: queryKeys.flashcardGenerationJob(jobId ?? ''),
-    queryFn: () => getFlashcardGenerationJob(jobId!),
+    queryKey: queryKeys.flashcardDeckGenerationStatus(deckId),
+    queryFn: () => getFlashcardDeckGenerationStatus(deckId),
     refetchInterval: (query) =>
       query.state.data && isGenerationInProgress(query.state.data.status) ? 2000 : false,
   });
@@ -107,6 +106,11 @@ export function FlashcardDeckScreen({ navigation, route }: FlashcardDeckScreenPr
     resolver: zodResolver(flashcardCardFormSchema),
     defaultValues: emptyCardValues('VOCABULARY'),
   });
+  const generatedCardCount = jobQuery.data
+    ? jobQuery.data.batches.length > 0
+      ? jobQuery.data.batches.reduce((total, batch) => total + batch.createdCount, 0)
+      : jobQuery.data.createdCount
+    : 0;
 
   const updateMutation = useMutation({
     mutationFn: (data: FlashcardDeckFormData) =>
@@ -173,15 +177,23 @@ export function FlashcardDeckScreen({ navigation, route }: FlashcardDeckScreenPr
 
   useEffect(() => {
     const job = jobQuery.data;
-    if (!job || isGenerationInProgress(job.status) || handledTerminalJob.current) {
+    if (!job || isGenerationInProgress(job.status) || handledTerminalJobId.current === job.id) {
       return;
     }
 
-    handledTerminalJob.current = true;
+    handledTerminalJobId.current = job.id;
     void queryClient.invalidateQueries({ queryKey: queryKeys.flashcardDeckCards(deckId) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.flashcardMetrics });
     void queryClient.invalidateQueries({ queryKey: queryKeys.flashcardDecks });
   }, [deckId, jobQuery.data, queryClient]);
+
+  useEffect(() => {
+    if (generatedCardCount === 0) {
+      return;
+    }
+
+    void queryClient.invalidateQueries({ queryKey: queryKeys.flashcardDeckCards(deckId) });
+  }, [deckId, generatedCardCount, queryClient]);
 
   useEffect(() => {
     screenScrollRef.current?.scrollTo({ animated: true, y: 0 });
@@ -250,7 +262,9 @@ export function FlashcardDeckScreen({ navigation, route }: FlashcardDeckScreenPr
           </Button>
         </View>
 
-        {jobQuery.data ? <FlashcardGenerationStatusCard job={jobQuery.data} /> : null}
+        {jobQuery.data && jobQuery.data.status !== 'COMPLETED' ? (
+          <FlashcardGenerationStatusCard job={jobQuery.data} />
+        ) : null}
 
         {deckQuery.isLoading ? (
           <View className="h-36 animate-pulse rounded-2xl border border-border bg-muted" />
@@ -294,7 +308,7 @@ export function FlashcardDeckScreen({ navigation, route }: FlashcardDeckScreenPr
             data={cards}
             emptyMessage={
               jobQuery.data && isGenerationInProgress(jobQuery.data.status)
-                ? 'As primeiras cartas aparecerao quando a geracao terminar.'
+                ? 'As cartas aparecerao conforme os lotes forem concluidos.'
                 : 'Este deck ainda nao possui cartas disponiveis.'
             }
             error={cardsQuery.error}
