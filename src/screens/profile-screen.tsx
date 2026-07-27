@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { useMutationFeedback } from '@/hooks/use-mutation-feedback';
 import { useThemePalette } from '@/hooks/use-theme-palette';
+import { compressProfileImage } from '@/lib/profile-image';
 import { queryKeys } from '@/lib/query-keys';
 import type { RootDrawerParamList } from '@/navigation/types';
 import {
@@ -39,6 +40,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
   const palette = useThemePalette();
   const [isProfileFormOpen, setIsProfileFormOpen] = useState(false);
   const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false);
+  const [isPreparingImage, setIsPreparingImage] = useState(false);
   const [profileImageVersion, setProfileImageVersion] = useState(Date.now());
 
   const profileForm = useForm<ProfileFormData>({
@@ -93,6 +95,10 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
   };
 
   const pickProfileImage = async () => {
+    if (isPreparingImage || imageMutation.isPending) {
+      return;
+    }
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
@@ -112,19 +118,34 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
       return;
     }
 
-    const asset = result.assets[0];
-    const mimeType = asset.mimeType ?? 'image/jpeg';
-    const image = asset.base64 ? `data:${mimeType};base64,${asset.base64}` : '';
-    const parsed = profileImageFormSchema.safeParse({ image });
+    setIsPreparingImage(true);
 
-    if (!parsed.success) {
+    try {
+      const asset = result.assets[0];
+      const mimeType = asset.mimeType ?? 'image/jpeg';
+      const sourceUri = asset.base64 ? `data:${mimeType};base64,${asset.base64}` : asset.uri;
+      const image = await compressProfileImage({
+        height: asset.height,
+        uri: sourceUri,
+        width: asset.width,
+      });
+      const parsed = profileImageFormSchema.safeParse({ image });
+
+      if (!parsed.success) {
+        feedback.showError(
+          new Error(parsed.error.issues[0]?.message ?? 'Selecione uma imagem valida.')
+        );
+        return;
+      }
+
+      imageMutation.mutate(parsed.data);
+    } catch (error) {
       feedback.showError(
-        new Error(parsed.error.issues[0]?.message ?? 'Selecione uma imagem valida.')
+        error instanceof Error ? error : new Error('Nao foi possivel preparar a imagem.')
       );
-      return;
+    } finally {
+      setIsPreparingImage(false);
     }
-
-    imageMutation.mutate(parsed.data);
   };
 
   return (
@@ -154,7 +175,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
           renderItem={(profileUser) => (
             <ProfileCard
               imageVersion={profileImageVersion}
-              isImagePending={imageMutation.isPending}
+              isImagePending={isPreparingImage || imageMutation.isPending}
               key={profileUser.id}
               onEditPassword={() => setIsPasswordFormOpen(true)}
               onEditPhoto={pickProfileImage}
